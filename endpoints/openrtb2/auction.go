@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/prebid/prebid-server/firstpartydata"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
-	jsonpatch "github.com/evanphx/json-patch"
+	"github.com/evanphx/json-patch"
 	"github.com/gofrs/uuid"
 	"github.com/golang/glog"
 	"github.com/julienschmidt/httprouter"
@@ -139,10 +140,17 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 		deps.analytics.LogAuctionObject(&ao)
 	}()
 
-	req, impExtInfoMap, errL, requestJson := deps.parseRequest(r)
-
-	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels, requestJson) {
+	req, impExtInfoMap, errL := deps.parseRequest(r)
+	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels) {
 		return
+	}
+
+	resolvedFPD, fpdErrors := firstpartydata.ExtractFPDForBidders(req)
+	if len(fpdErrors) > 0 {
+		if errortypes.ContainsFatalError(fpdErrors) && writeError(fpdErrors, w, &labels) {
+			return
+		}
+		errL = append(errL, fpdErrors...)
 	}
 	warnings := errortypes.WarningOnly(errL)
 
@@ -197,6 +205,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 		Warnings:                   warnings,
 		GlobalPrivacyControlHeader: secGPC,
 		ImpExtInfoMap:              impExtInfoMap,
+		FirstPartyData:             resolvedFPD,
 	}
 
 	response, err := deps.ex.HoldAuction(ctx, auctionRequest, nil)
