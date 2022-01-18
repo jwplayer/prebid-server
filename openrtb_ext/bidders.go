@@ -79,7 +79,6 @@ const (
 	Bidder33Across          BidderName = "33across"
 	BidderAceex             BidderName = "aceex"
 	BidderAcuityAds         BidderName = "acuityads"
-	BidderAdagio            BidderName = "adagio"
 	BidderAdf               BidderName = "adf"
 	BidderAdform            BidderName = "adform"
 	BidderAdgeneration      BidderName = "adgeneration"
@@ -227,7 +226,6 @@ func CoreBidderNames() []BidderName {
 		Bidder33Across,
 		BidderAceex,
 		BidderAcuityAds,
-		BidderAdagio,
 		BidderAdf,
 		BidderAdform,
 		BidderAdgeneration,
