@@ -5,14 +5,14 @@
 
   "type": "object",
   "properties": {
-    "placementid": {
+    "placementId": {
       "type": "string"
     },
-    "pubid": {
+    "publisherId": {
       "type": "string"
     }
   },
   "required": [
-    "placementid"
+    "placementId"
   ]
 }
