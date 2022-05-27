@@ -1,5 +1,6 @@
 maintainer:
   email: boost-engineering@jwplayer.com
+gvlVendorID: 1046
 capabilities:
   app:
     mediaTypes:
