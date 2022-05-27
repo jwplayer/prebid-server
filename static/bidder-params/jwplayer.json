@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "JWPlayer Adapter Params",
+  "description": "A schema which validates params accepted by the JWPlayer adapter",
+
+  "type": "object",
+  "properties": {
+    "placementId": {
+      "type": "string"
+    },
+    "publisherId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "placementId"
+  ]
+}

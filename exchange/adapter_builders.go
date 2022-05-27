@@ -1,6 +1,7 @@
 package exchange
 
 import (
+	"github.com/prebid/prebid-server/adapters/jwplayer"
 	"github.com/prebid/prebid-server/v3/adapters"
 	ttx "github.com/prebid/prebid-server/v3/adapters/33across"
 	"github.com/prebid/prebid-server/v3/adapters/aax"
@@ -371,6 +372,7 @@ func newAdapterBuilders() map[openrtb_ext.BidderName]adapters.Builder {
 		openrtb_ext.BidderIQZone:            iqzone.Builder,
 		openrtb_ext.BidderIx:                ix.Builder,
 		openrtb_ext.BidderJixie:             jixie.Builder,
+		openrtb_ext.BidderJWPlayer:          jwplayer.Builder,
 		openrtb_ext.BidderKargo:             kargo.Builder,
 		openrtb_ext.BidderKayzen:            kayzen.Builder,
 		openrtb_ext.BidderKidoz:             kidoz.Builder,
