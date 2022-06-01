@@ -2,13 +2,11 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/config"
-	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 )
 
@@ -27,20 +25,20 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
     requestCopy := *request
     for _,imp:= range requestCopy.Imp {
-        placementId := imp.ext.prebid.bidder.jwplayer.placementId
+        placementId := imp.Ext.prebid.bidder.jwplayer.placementId
         imp.tagid = placementId
         delete(imp, "ext")
     }
 
-    if site := requestCopy.site; site != nil {
+    if site := requestCopy.Site; site != nil {
         delete(site, "id")
 
-        if publisher := site.publisher; publisher != nil {
+        if publisher := site.Publisher; publisher != nil {
             delete(publisher, "id")
         }
     }
 
-    if app := requestCopy.app; app != nil {
+    if app := requestCopy.App; app != nil {
         delete(app, "id")
     }
 
@@ -61,5 +59,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
     }
 
     return []*adapters.RequestData{requestData}, nil
+}
 
+func (a *JWPlayerAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+    return nil, nil
 }
