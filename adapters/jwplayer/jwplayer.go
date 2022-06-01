@@ -29,6 +29,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
     for _,imp:= range requestCopy.Imp {
         placementId := imp.ext.prebid.bidder.jwplayer.placementId
         imp.tagid = placementId
+        delete(imp, "ext")
     }
 
     if site := requestCopy.site; site != nil {
@@ -43,5 +44,22 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
         delete(app, "id")
     }
 
+    requestJSON, err := json.Marshal(requestCopy)
+    if err != nil {
+        return nil, []error{err}
+    }
+
+    headers := http.Header{}
+    headers.Add("Content-Type", "application/json;charset=utf-8")
+    headers.Add("Accept", "application/json")
+
+    requestData := &adapters.RequestData{
+        Method:  "POST",
+        Uri:     a.endpoint,
+        Body:    requestJSON,
+        Headers: headers,
+    }
+
+    return []*adapters.RequestData{requestData}, nil
 
 }
