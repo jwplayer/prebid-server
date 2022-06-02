@@ -1,7 +1,6 @@
 package jwplayer
 
 import (
-	"JWPlayerAdapter"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/stretchr/testify/assert"
@@ -10,7 +9,7 @@ import (
 
 func TestRequest(t *testing.T) {
 	var a JWPlayerAdapter
-	a.URI = "http://test.com/openrtb2"
+	a.endpoint = "http://test.com/openrtb2"
 
 	var reqInfo adapters.ExtraRequestInfo
 	reqInfo.PbsEntryPoint = "video"
@@ -18,7 +17,7 @@ func TestRequest(t *testing.T) {
 	var req openrtb2.BidRequest
 	req.ID = "test_id"
 
-	impExt := `{"prebid":{"bidder":{"jwplayer":{"placementId":123}}}}`
+	impExt := `{"prebid":{"bidder":{"jwplayer":{"placementId":"123"}}}}`
 
 	req.Imp = append(req.Imp, openrtb2.Imp{ID: "1_0", Ext: []byte(impExt)})
 
@@ -26,17 +25,38 @@ func TestRequest(t *testing.T) {
 
 	assert.Empty(t, err, "Errors array should be empty")
 	assert.Len(t, result, 1, "Only one request should be returned")
+}
 
-	//     var error error
-	//     var reqData *openrtb2.BidRequest
-	//     error = json.Unmarshal(result[0].Body, &reqData)
-	//     assert.NoError(t, error, "Response body unmarshalling error should be nil")
-	//
-	//     var reqDataExt *appnexusReqExt
-	//     error = json.Unmarshal(reqData.Ext, &reqDataExt)
-	//     assert.NoError(t, error, "Response ext unmarshalling error should be nil")
-	//
-	//     regMatch, matchErr := regexp.Match(`^[0-9]+$`, []byte(reqDataExt.Appnexus.AdPodId))
-	//     assert.NoError(t, matchErr, "Regex match error should be nil")
-	//     assert.True(t, regMatch, "AdPod id doesn't present in Appnexus extension or has incorrect format")
+
+func TestInvalidImpExt(t *testing.T) {
+	var a JWPlayerAdapter
+	a.endpoint = "http://test.com/openrtb2"
+
+	var reqInfo adapters.ExtraRequestInfo
+	reqInfo.PbsEntryPoint = "video"
+
+	var req1 openrtb2.BidRequest
+	req1.ID = "test_id_1"
+
+	impExt1 := `{}`
+
+	req1.Imp = append(req1.Imp, openrtb2.Imp{ID: "1_0", Ext: []byte(impExt1)})
+
+	result, err := a.MakeRequests(&req1, &reqInfo)
+
+	assert.Len(t, err, 1, "An error should be returned")
+	assert.Empty(t, result, "Result should be nil")
+
+		var req2 openrtb2.BidRequest
+		req2.ID = "test_id_2"
+
+		impExt2 := `{"bidder":{"jwplayer":{"placementId": "123"}}}`
+
+		req2.Imp = append(req2.Imp, openrtb2.Imp{ID: "2_0", Ext: []byte(impExt2)})
+
+		result2, err2 := a.MakeRequests(&req2, &reqInfo)
+
+		assert.Len(t, err2, 1, "An error should be returned")
+		assert.Empty(t, result2, "Result should be nil")
+
 }
