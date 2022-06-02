@@ -7,6 +7,7 @@ import (
 	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
+	"fmt"
 )
 
 type JWPlayerAdapter struct {
@@ -20,6 +21,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	}
 	return bidder, nil
 }
+
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
@@ -79,6 +81,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 }
 
 func (a *JWPlayerAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+	fmt.Println("Make Bids")
 	return nil, nil
 }
 
@@ -89,9 +92,8 @@ func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, []error) 
 		errors = append(errors, err)
 		return nil, errors
 	}
-
 	var params openrtb_ext.ImpExtJWPlayer
-	if err := json.Unmarshal(impExt.Prebid.Bidder["jwplayer"], &params); err != nil {
+	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
 		errors = append(errors, err)
 	}
 
