@@ -2,12 +2,11 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"net/http"
-
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/openrtb_ext"
+	"net/http"
 )
 
 type JWPlayerAdapter struct {
@@ -23,10 +22,17 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 }
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
+	var errors []error
 	requestCopy := *request
 	for _, imp := range requestCopy.Imp {
-		placementId := imp.Ext.prebid.bidder.jwplayer.placementId
-		imp.TagID = placementId
+		params, parserErrors := parseBidderParams(imp)
+		if parserErrors != nil {
+			errors = append(errors, parserErrors...)
+		} else {
+			placementId := params.PlacementId
+			imp.TagID = placementId
+		}
+
 		imp.Ext = nil
 	}
 
@@ -54,7 +60,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	requestJSON, err := json.Marshal(requestCopy)
 	if err != nil {
-		return nil, []error{err}
+		errors = append(errors, err)
+		return nil, errors
 	}
 
 	headers := http.Header{}
@@ -68,9 +75,25 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		Headers: headers,
 	}
 
-	return []*adapters.RequestData{requestData}, nil
+	return []*adapters.RequestData{requestData}, errors
 }
 
 func (a *JWPlayerAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	return nil, nil
+}
+
+func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, []error) {
+	var errors []error
+	var impExt adapters.ExtImpBidder
+	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
+		errors = append(errors, err)
+		return nil, errors
+	}
+
+	var params openrtb_ext.ImpExtJWPlayer
+	if err := json.Unmarshal(impExt.Prebid.Bidder["jwplayer"], &params); err != nil {
+		errors = append(errors, err)
+	}
+
+	return &params, errors
 }
