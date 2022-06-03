@@ -5,6 +5,7 @@ import (
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/config"
+	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
 	"fmt"
@@ -80,9 +81,46 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	return []*adapters.RequestData{requestData}, errors
 }
 
-func (a *JWPlayerAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	fmt.Println("Make Bids")
-	return nil, nil
+	if responseData.StatusCode == http.StatusNoContent {
+		return nil, nil
+	}
+
+	if responseData.StatusCode == http.StatusBadRequest {
+		err := &errortypes.BadInput{
+			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
+		}
+		return nil, []error{err}
+	}
+
+	if responseData.StatusCode != http.StatusOK {
+		err := &errortypes.BadServerResponse{
+			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
+		}
+		return nil, []error{err}
+	}
+
+	var response openrtb2.BidResponse
+	if err := json.Unmarshal(responseData.Body, &response); err != nil {
+		return nil, []error{err}
+	}
+
+	fmt.Println("Response: ", response)
+
+
+	bidResponse := adapters.NewBidderResponseWithBidsCapacity(len(request.Imp))
+	bidResponse.Currency = response.Cur
+	for _, seatBid := range response.SeatBid {
+		for i, _ := range seatBid.Bid {
+			b := &adapters.TypedBid{
+				Bid:     &seatBid.Bid[i],
+				BidType: openrtb_ext.BidTypeVideo,
+			}
+			bidResponse.Bids = append(bidResponse.Bids, b)
+		}
+	}
+	return bidResponse, nil
 }
 
 func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, []error) {
