@@ -2,13 +2,13 @@ package jwplayer
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
-	"fmt"
 )
 
 type JWPlayerAdapter struct {
@@ -23,10 +23,16 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	return bidder, nil
 }
 
+// TODO:
+// test for multiple ssps
+// i.e. 1 imp with many bidders
+// or many imps with diff bidders each
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
 	requestCopy := *request
+	var processedImps = make([]openrtb2.Imp, 0, len(request.Imp))
+
 	for _, imp := range requestCopy.Imp {
 		params, parserErrors := parseBidderParams(imp)
 		if parserErrors != nil {
@@ -34,10 +40,20 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		} else {
 			placementId := params.PlacementId
 			imp.TagID = placementId
+			imp.Ext = nil
+			processedImps = append(processedImps, imp)
 		}
-
-		imp.Ext = nil
 	}
+
+	if len(processedImps) == 0 {
+		err := &errortypes.BadInput{
+			Message: "The bid request did not contain valid Imp objects.",
+		}
+		errors = append(errors, err)
+		return nil, errors
+	}
+
+	requestCopy.Imp = processedImps
 
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
@@ -108,7 +124,6 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 
 	fmt.Println("Response: ", response)
 
-
 	bidResponse := adapters.NewBidderResponseWithBidsCapacity(len(request.Imp))
 	bidResponse.Currency = response.Cur
 	for _, seatBid := range response.SeatBid {
@@ -120,6 +135,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 			bidResponse.Bids = append(bidResponse.Bids, b)
 		}
 	}
+
 	return bidResponse, nil
 }
 
@@ -130,9 +146,11 @@ func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, []error) 
 		errors = append(errors, err)
 		return nil, errors
 	}
+
 	var params openrtb_ext.ImpExtJWPlayer
 	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
 		errors = append(errors, err)
+		return nil, errors
 	}
 
 	return &params, errors
