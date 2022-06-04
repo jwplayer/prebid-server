@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/openrtb_ext"
 	"github.com/stretchr/testify/assert"
+	"net/http"
 	"testing"
 )
 
@@ -111,4 +113,71 @@ func TestIdsAreRemoved(t *testing.T) {
 	assert.Empty(t, resultJSON.Site.Publisher.ID, "Publisher.id should be removed")
 	assert.NotEmpty(t, resultJSON.App, "App object should not be removed")
 	assert.Empty(t, resultJSON.App.ID, "App.id should be removed")
+}
+
+
+func TestOpenRTBEmptyResponse(t *testing.T) {
+	httpResp := &adapters.ResponseData{
+		StatusCode: http.StatusNoContent,
+	}
+	bidder := new(JWPlayerAdapter)
+	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
+
+	assert.Nil(t, bidResponse, "Expected empty response")
+	assert.Empty(t, errs, "Expected 0 errors. Got %d", len(errs))
+}
+
+func TestOpenRTBSurpriseResponse(t *testing.T) {
+	httpResp := &adapters.ResponseData{
+		StatusCode: http.StatusAccepted,
+	}
+	bidder := new(JWPlayerAdapter)
+	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
+
+	assert.Nil(t, bidResponse, "Expected empty response")
+
+	assert.Equal(t, 1, len(errs), "Expected 1 error. Got %d", len(errs))
+}
+
+func TestOpenRTBStandardResponse(t *testing.T) {
+	request := &openrtb2.BidRequest{
+		ID: "test-request-id",
+		Imp: []openrtb2.Imp{{
+			ID: "test-imp-id",
+			Video: &openrtb2.Video{
+				W: 320,
+				H: 50,
+			},
+			Ext: json.RawMessage(`{"bidder": {
+				"placementId": "2763",
+			}}`),
+		}},
+	}
+
+	requestJson, _ := json.Marshal(request)
+	reqData := &adapters.RequestData{
+		Method:  "POST",
+		Uri:     "test-uri",
+		Body:    requestJson,
+		Headers: nil,
+	}
+
+	httpResp := &adapters.ResponseData{
+		StatusCode: http.StatusOK,
+		Body:       []byte(`{"id":"test-request-id","seatbid":[{"bid":[{"id":"1234567890","impid":"test-imp-id","price": 2,"crid":"4122982","adm":"some ad","h": 50,"w": 320,"ext":{"bidder":{"appnexus":{"targeting": {"key": "rpfl_2763", "values":["43_tier0100"]},"mime": "text/html","size_id": 43}}}}]}]}`),
+	}
+
+	bidder := new(JWPlayerAdapter)
+	bidResponse, errs := bidder.MakeBids(request, reqData, httpResp)
+
+	assert.NotNil(t, bidResponse, "Expected not empty response")
+	assert.Equal(t, 1, len(bidResponse.Bids), "Expected 1 bid. Got %d", len(bidResponse.Bids))
+
+	assert.Empty(t, errs, "Expected 0 errors. Got %d", len(errs))
+
+	assert.Equal(t, openrtb_ext.BidTypeVideo, bidResponse.Bids[0].BidType,
+		"Expected a video bid. Got: %s", bidResponse.Bids[0].BidType)
+
+	theBid := bidResponse.Bids[0].Bid
+	assert.Equal(t, "1234567890", theBid.ID, "Bad bid ID. Expected %s, got %s", "1234567890", theBid.ID)
 }
