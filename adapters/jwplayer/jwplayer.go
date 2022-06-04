@@ -23,11 +23,6 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	return bidder, nil
 }
 
-// TODO:
-// test for multiple ssps
-// i.e. 1 imp with many bidders
-// or many imps with diff bidders each
-
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
 	requestCopy := *request
