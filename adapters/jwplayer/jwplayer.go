@@ -34,9 +34,9 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	var processedImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
 	for _, imp := range requestCopy.Imp {
-		params, parserErrors := parseBidderParams(imp)
-		if parserErrors != nil {
-			errors = append(errors, parserErrors...)
+		params, parserError := parseBidderParams(imp)
+		if parserError != nil {
+			errors = append(errors, parserError)
 		} else {
 			placementId := params.PlacementId
 			imp.TagID = placementId
@@ -98,7 +98,6 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 }
 
 func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
-	fmt.Println("Make Bids")
 	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
@@ -122,36 +121,31 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 		return nil, []error{err}
 	}
 
-	fmt.Println("Response: ", response)
-
-	bidResponse := adapters.NewBidderResponseWithBidsCapacity(len(request.Imp))
-	bidResponse.Currency = response.Cur
+	bidderResponse := adapters.NewBidderResponseWithBidsCapacity(len(request.Imp))
+	bidderResponse.Currency = response.Cur
 	for _, seatBid := range response.SeatBid {
-		for i, _ := range seatBid.Bid {
+		for _, bid := range seatBid.Bid {
 			b := &adapters.TypedBid{
-				Bid:     &seatBid.Bid[i],
+				Bid:     &bid,
 				BidType: openrtb_ext.BidTypeVideo,
 			}
-			bidResponse.Bids = append(bidResponse.Bids, b)
+			bidderResponse.Bids = append(bidderResponse.Bids, b)
 		}
 	}
 
-	return bidResponse, nil
+	return bidderResponse, nil
 }
 
-func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, []error) {
-	var errors []error
+func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	var impExt adapters.ExtImpBidder
 	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
-		errors = append(errors, err)
-		return nil, errors
+		return nil, err
 	}
 
 	var params openrtb_ext.ImpExtJWPlayer
 	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
-		errors = append(errors, err)
-		return nil, errors
+		return nil, err
 	}
 
-	return &params, errors
+	return &params, nil
 }
