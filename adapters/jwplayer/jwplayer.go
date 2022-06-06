@@ -26,7 +26,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
 	requestCopy := *request
-	var processedImps = make([]openrtb2.Imp, 0, len(request.Imp))
+	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
 	for _, imp := range requestCopy.Imp {
 		params, parserError := parseBidderParams(imp)
@@ -36,11 +36,11 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 			placementId := params.PlacementId
 			imp.TagID = placementId
 			imp.Ext = nil
-			processedImps = append(processedImps, imp)
+			validImps = append(validImps, imp)
 		}
 	}
 
-	if len(processedImps) == 0 {
+	if len(validImps) == 0 {
 		err := &errortypes.BadInput{
 			Message: "The bid request did not contain valid Imp objects.",
 		}
@@ -48,7 +48,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		return nil, errors
 	}
 
-	requestCopy.Imp = processedImps
+	requestCopy.Imp = validImps
 
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
