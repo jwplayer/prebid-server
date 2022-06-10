@@ -5,13 +5,22 @@ import (
 	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"net/http"
-	"time"
+	"net/url"
+	"strings"
 )
 
 type JWContentMetadata struct {
-	url string
-	title string
-	description string
+	Url string
+	Title string
+	Description string
+}
+
+type JWContentExt struct {
+	Description string `json:"description"`
+}
+
+type JWDataExt struct {
+	Segtax int `json:"segtax"`
 }
 
 type JWTargetingResponse struct {
@@ -25,18 +34,63 @@ type JWTargetingData struct {
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
-func EnnrichRequest(request *openrtb2.BidRequest) {
+func EnnrichRequest(request *openrtb2.BidRequest, publisherId string) {
 	println("begin enrichment")
-	time.Sleep(8 * time.Second)
+	if site := request.Site; site != nil {
+		AddTargeting(&site.Keywords, site.Content, publisherId)
+	}
+
+	if app := request.App; app != nil {
+		AddTargeting(&app.Keywords, app.Content, publisherId)
+	}
+
 	println("end enrichment")
 }
 
-func GetContentTargeting(publisherId string, contentUrl string, title string, description string) *JWTargetingResponse {
+func AddTargeting(keywords *string, content *openrtb2.Content, publisherId string) {
+	metadata := GetContentMetadata(content)
+	targetingResponse := GetContentTargeting(publisherId, metadata)
+	if targetingResponse == nil {
+		return
+	}
+
+	segments := GetAllSegments(targetingResponse.Data)
+	if len(segments) == 0 {
+		return
+	}
+
+	if len(*keywords) > 0 {
+		*keywords += ","
+	}
+	*keywords += GetKeywords(segments)
+
+	contentDatum := GetContentDatum(segments)
+	content.Data = append(content.Data, contentDatum)
+}
+
+func GetContentMetadata(content *openrtb2.Content) JWContentMetadata {
+	metadata := JWContentMetadata{
+		Url: content.URL,
+		Title: content.Title,
+	}
+
+	contentExt := JWContentExt{}
+	if error := json.Unmarshal(content.Ext, &contentExt); error == nil {
+		metadata.Description = contentExt.Description
+	}
+
+	return metadata
+}
+
+func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata) *JWTargetingResponse {
 	// http get
 	// c <- json
 
-	url := fmt.Sprintf("https://content-targeting-api.longtailvideo.com/property/%s/content_segments?content_url=%s&title=%s&description=%s", publisherId, contentUrl, title, description)
-	resp, err := http.Get(url)
+	mediaUrl := url.QueryEscape(contentMetadata.Url)
+	title := url.QueryEscape(contentMetadata.Title)
+	description := url.QueryEscape(contentMetadata.Description)
+	reqUrl := fmt.Sprintf("https://content-targeting-api.longtailvideo.com/property/%s/content_segments?content_url=%s&title=%s&description=%s", publisherId, mediaUrl, title, description)
+	resp, err := http.Get(reqUrl)
 	if err != nil {
 		fmt.Println("error: ", err)
 		return nil
@@ -55,13 +109,39 @@ func GetContentTargeting(publisherId string, contentUrl string, title string, de
 	return &targetingResponse
 }
 
-func getKeywords() {}
+func GetAllSegments(targeting JWTargetingData) []string {
+	return append(targeting.BaseSegments, targeting.TargetingProfiles...)
+}
 
+func GetKeywords(segments []string) string {
+	if len(segments) == 0 {
+		return ""
+	}
 
-//func requestSegment
-//
+	keyword := "jwpseg="
+	// expected format: jwpseg=1,jwpseg=2,jwpseg=3
+	keyword += strings.Join(segments, "," + keyword)
+	return keyword
+}
 
+func GetContentDatum(segments []string) (contentData openrtb2.Data) {
+	contentData.Name = "jwplayer.com"
+	contentData.Segment = GetContentSegments(segments)
+	dataExt := JWDataExt{
+		Segtax: 502,
+	}
+	contentData.Ext, _ = json.Marshal(dataExt)
+	return contentData
+}
 
-// request content targeting -> return body
-// convert body to appnexus format
-// write to request:
+func GetContentSegments(rawSegments []string) []openrtb2.Segment {
+	segments := make([]openrtb2.Segment, len(rawSegments))
+	for _, rawSegment := range rawSegments {
+		segment := openrtb2.Segment{
+			Value: rawSegment,
+		}
+		segments = append(segments, segment)
+	}
+
+	return segments
+}
