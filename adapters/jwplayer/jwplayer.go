@@ -71,6 +71,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
 		app.ID = ""
 	}
+	// todo get publisher!!
+	EnnrichRequest(&requestCopy, "D9hUeD6O")
 
 	requestJSON, err := json.Marshal(requestCopy)
 	if err != nil {
