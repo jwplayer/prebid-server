@@ -10,6 +10,7 @@ import (
 )
 
 const jwplayerSegtax = 502
+const jwplayerDomain = "jwplayer.com"
 
 type JWContentMetadata struct {
 	Url string
@@ -50,36 +51,39 @@ func EnnrichRequest(request *openrtb2.BidRequest, publisherId string) {
 }
 
 func AddTargeting(keywords *string, content *openrtb2.Content, publisherId string) {
-	jwpsegs := parseExistingSegments(content.Data)
-	if jwpsegs == nil || len(jwpsegs) == 0 {
+	jwpsegs := GetExistingJwpsegs(content.Data)
+	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)
 		return
 	}
 
 	if publisherId == "" {
+		// error: missing pubid
 		return
 	}
-	
-	metadata := ParseContentMetadata(content)
+
+	metadata := ParseContentMetadata(*content)
 	if metadata.Url == "" {
+		// error: missing media url
 		return
 	}
-	
+
 	channel := make(chan *JWTargetingResponse)
-	GetContentTargeting(publisherId, metadata, channel)
+	FetchContentTargeting(publisherId, metadata, channel)
 	targetingResponse := <- channel
 	if targetingResponse == nil {
 		return
 	}
 
-	segments := GetAllSegments(targetingResponse.Data)
-	if len(segments) == 0 {
+	jwpsegs = GetAllSegments(targetingResponse.Data)
+	if len(jwpsegs) == 0 {
+		// error: segments from req were empty
 		return
 	}
 
-	writeToKeywords(keywords, segments)
+	writeToKeywords(keywords, jwpsegs)
 
-	contentDatum := GetContentDatum(segments)
+	contentDatum := GetContentDatum(jwpsegs)
 	content.Data = append(content.Data, contentDatum)
 }
 
@@ -90,7 +94,7 @@ func writeToKeywords(keywords *string, segments []string) {
 	*keywords += GetKeywords(segments)
 }
 
-func ParseContentMetadata(content *openrtb2.Content) JWContentMetadata {
+func ParseContentMetadata(content openrtb2.Content) JWContentMetadata {
 	metadata := JWContentMetadata{
 		Url: content.URL,
 		Title: content.Title,
@@ -104,27 +108,26 @@ func ParseContentMetadata(content *openrtb2.Content) JWContentMetadata {
 	return metadata
 }
 
-func parseExistingSegments(data []openrtb2.Data) []string {
-	// for _, rawSegment := range rawSegments {
+func GetExistingJwpsegs(data []openrtb2.Data) []string {
 	for _, datum := range data {
-		if hasTargetingSegments(datum) {
-			return convertSegments(datum.Segment)
+		if HasJwpsegs(datum) {
+			return ParseJwpsegs(datum.Segment)
 		}
 	}
 	
 	return nil
 }
 
-func hasTargetingSegments(datum openrtb2.Data) bool {
+func HasJwpsegs(datum openrtb2.Data) bool {
 	dataExt := JWDataExt{}
 	if error := json.Unmarshal(datum.Ext, &dataExt); error != nil {
 		return false
 	}
 	
-	return dataExt.Segtax == jwplayerSegtax
+	return datum.Name == jwplayerDomain && dataExt.Segtax == jwplayerSegtax
 }
 
-func convertSegments(segments []openrtb2.Segment) []string {
+func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	jwpsegs := make([]string, len(segments))
 	for _, segment := range segments {
 		jwpsegs = append(jwpsegs, segment.Value)
@@ -133,7 +136,7 @@ func convertSegments(segments []openrtb2.Segment) []string {
 	return jwpsegs
 }
 
-func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata, c chan *JWTargetingResponse) {
+func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata, c chan *JWTargetingResponse) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
@@ -141,6 +144,7 @@ func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata, 
 	resp, err := http.Get(reqUrl)
 	if err != nil {
 		fmt.Println("error: ", err)
+		// error: request error
 		return
 	}
 
@@ -148,6 +152,7 @@ func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata, 
 
 	targetingResponse := JWTargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
+		// error: parsing error
 		fmt.Println("error2: ", error)
 		return
 	}
@@ -172,7 +177,7 @@ func GetKeywords(segments []string) string {
 }
 
 func GetContentDatum(segments []string) (contentData openrtb2.Data) {
-	contentData.Name = "jwplayer.com"
+	contentData.Name = jwplayerDomain
 	contentData.Segment = GetContentSegments(segments)
 	dataExt := JWDataExt{
 		Segtax: jwplayerSegtax,
