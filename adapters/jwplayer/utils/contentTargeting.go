@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+const jwplayerSegtax = 502
+
 type JWContentMetadata struct {
 	Url string
 	Title string
@@ -48,8 +50,24 @@ func EnnrichRequest(request *openrtb2.BidRequest, publisherId string) {
 }
 
 func AddTargeting(keywords *string, content *openrtb2.Content, publisherId string) {
-	metadata := GetContentMetadata(content)
-	targetingResponse := GetContentTargeting(publisherId, metadata)
+	jwpsegs := parseExistingSegments(content.Data)
+	if jwpsegs == nil || len(jwpsegs) == 0 {
+		writeToKeywords(keywords, jwpsegs)
+		return
+	}
+
+	if publisherId == "" {
+		return
+	}
+	
+	metadata := ParseContentMetadata(content)
+	if metadata.Url == "" {
+		return
+	}
+	
+	channel := make(chan *JWTargetingResponse)
+	GetContentTargeting(publisherId, metadata, channel)
+	targetingResponse := <- channel
 	if targetingResponse == nil {
 		return
 	}
@@ -59,16 +77,20 @@ func AddTargeting(keywords *string, content *openrtb2.Content, publisherId strin
 		return
 	}
 
-	if len(*keywords) > 0 {
-		*keywords += ","
-	}
-	*keywords += GetKeywords(segments)
+	writeToKeywords(keywords, segments)
 
 	contentDatum := GetContentDatum(segments)
 	content.Data = append(content.Data, contentDatum)
 }
 
-func GetContentMetadata(content *openrtb2.Content) JWContentMetadata {
+func writeToKeywords(keywords *string, segments []string) {
+	if len(*keywords) > 0 {
+		*keywords += ","
+	}
+	*keywords += GetKeywords(segments)
+}
+
+func ParseContentMetadata(content *openrtb2.Content) JWContentMetadata {
 	metadata := JWContentMetadata{
 		Url: content.URL,
 		Title: content.Title,
@@ -82,10 +104,36 @@ func GetContentMetadata(content *openrtb2.Content) JWContentMetadata {
 	return metadata
 }
 
-func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata) *JWTargetingResponse {
-	// http get
-	// c <- json
+func parseExistingSegments(data []openrtb2.Data) []string {
+	// for _, rawSegment := range rawSegments {
+	for _, datum := range data {
+		if hasTargetingSegments(datum) {
+			return convertSegments(datum.Segment)
+		}
+	}
+	
+	return nil
+}
 
+func hasTargetingSegments(datum openrtb2.Data) bool {
+	dataExt := JWDataExt{}
+	if error := json.Unmarshal(datum.Ext, &dataExt); error != nil {
+		return false
+	}
+	
+	return dataExt.Segtax == jwplayerSegtax
+}
+
+func convertSegments(segments []openrtb2.Segment) []string {
+	jwpsegs := make([]string, len(segments))
+	for _, segment := range segments {
+		jwpsegs = append(jwpsegs, segment.Value)
+	}
+	
+	return jwpsegs
+}
+
+func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata, c chan *JWTargetingResponse) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
@@ -93,7 +141,7 @@ func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata) 
 	resp, err := http.Get(reqUrl)
 	if err != nil {
 		fmt.Println("error: ", err)
-		return nil
+		return
 	}
 
 	defer resp.Body.Close()
@@ -101,12 +149,11 @@ func GetContentTargeting(publisherId string, contentMetadata JWContentMetadata) 
 	targetingResponse := JWTargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
 		fmt.Println("error2: ", error)
-		return nil
+		return
 	}
 
 	fmt.Println("targetingResponse: ", targetingResponse)
-
-	return &targetingResponse
+	c <- &targetingResponse
 }
 
 func GetAllSegments(targeting JWTargetingData) []string {
@@ -128,7 +175,7 @@ func GetContentDatum(segments []string) (contentData openrtb2.Data) {
 	contentData.Name = "jwplayer.com"
 	contentData.Segment = GetContentSegments(segments)
 	dataExt := JWDataExt{
-		Segtax: 502,
+		Segtax: jwplayerSegtax,
 	}
 	contentData.Ext, _ = json.Marshal(dataExt)
 	return contentData
