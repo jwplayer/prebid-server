@@ -1,4 +1,4 @@
-package utils
+package jwplayer
 
 import (
 	"encoding/json"
@@ -73,8 +73,6 @@ func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 
 	return segments
 }
-
-
 
 func GetXandrKeywords(jwpsegs []string) string {
 	if len(jwpsegs) == 0 {
