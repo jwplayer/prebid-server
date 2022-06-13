@@ -68,17 +68,9 @@ func Enrich(keywords *string, content *openrtb2.Content, publisherId string) err
 		}
 	}
 
-	channel := make(chan *JWTargetingResponse, 1)
-	if err := FetchContentTargeting(publisherId, metadata, channel); err != nil {
+	targetingResponse, err := FetchContentTargeting(publisherId, metadata)
+	if err != nil {
 		return err
-	}
-
-	targetingResponse := <- channel
-	if targetingResponse == nil {
-		return &TargetingFailed{
-			Message: "Empty targeting response",
-			code: EmptyTargetingResponse,
-		}
 	}
 
 	jwpsegs = GetAllJwpsegs(targetingResponse.Data)
@@ -93,18 +85,19 @@ func Enrich(keywords *string, content *openrtb2.Content, publisherId string) err
 
 	contentDatum := MakeOrtbDatum(jwpsegs)
 	content.Data = append(content.Data, contentDatum)
+
+	return nil
 }
 
-func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata, ch chan *JWTargetingResponse) error {
+func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata) (*JWTargetingResponse, error) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
 	reqUrl := fmt.Sprintf("https://content-targeting-api.longtailvideo.com/property/%s/content_segments?content_url=%s&title=%s&description=%s", publisherId, mediaUrl, title, description)
 	resp, err := http.Get(reqUrl)
 	if err != nil {
-		close(ch)
 		statusCode := resp.StatusCode
-		return &TargetingFailed{
+		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
 			code: BaseNetworkErrorCode + statusCode,
 		}
@@ -114,16 +107,13 @@ func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata
 
 	targetingResponse := JWTargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
-		close(ch)
-		return &TargetingFailed{
+		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
 			code: BaseDecodingErrorCode,
 		}
 	}
 
-	ch <- &targetingResponse
-	close(ch)
-	return nil
+	return &targetingResponse, nil
 }
 
 func writeToKeywords(keywords *string, jwpsegs []string) {
