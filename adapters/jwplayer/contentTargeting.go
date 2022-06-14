@@ -11,26 +11,31 @@ import (
 const jwplayerSegtax = 502
 const jwplayerDomain = "jwplayer.com"
 
-type JWContentMetadata struct {
+type jwContentMetadata struct {
 	Url string
 	Title string
 	Description string
 }
 
-type JWContentExt struct {
+type jwContentExt struct {
 	Description string `json:"description"`
 }
 
-type JWDataExt struct {
+type jwDataExt struct {
 	Segtax int `json:"segtax"`
 }
 
-type JWTargetingResponse struct {
-	Uuid string          `json:"uuid"`
-	Data JWTargetingData `json:"data"`
+type enrichment struct {
+	response *jwTargetingResponse
+	error *TargetingFailed
 }
 
-type JWTargetingData struct {
+type jwTargetingResponse struct {
+	Uuid string          `json:"uuid"`
+	Data jwTargetingData `json:"data"`
+}
+
+type jwTargetingData struct {
 	MediaId string `json:"media_id"`
 	BaseSegments []string `json:"base_segments"`
 	TargetingProfiles []string `json:"targeting_profiles"`
@@ -40,7 +45,7 @@ type requestEnricher struct {
 	httpClient *http.Client
 }
 
-func BuildRequestEnricher(httpClient *http.Client) *requestEnricher {
+func buildRequestEnricher(httpClient *http.Client) *requestEnricher {
 	return &requestEnricher{
 		httpClient: httpClient,
 	}
@@ -48,17 +53,17 @@ func BuildRequestEnricher(httpClient *http.Client) *requestEnricher {
 
 func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, publisherId string) *TargetingFailed {
 	if site := request.Site; site != nil {
-		return enricher.enrich(&site.Keywords, site.Content, publisherId)
+		return enricher.enrich(&site.Keywords, site.Content, publisherId, request.ID)
 	}
 
 	if app := request.App; app != nil {
-		return enricher.enrich(&app.Keywords, app.Content, publisherId)
+		return enricher.enrich(&app.Keywords, app.Content, publisherId, request.ID)
 	}
 
 	return nil
 }
 
-func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, publisherId string) *TargetingFailed {
+func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, publisherId string, id string) *TargetingFailed {
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)
@@ -80,11 +85,29 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 		}
 	}
 
-	targetingResponse, err := enricher.FetchContentTargeting(publisherId, metadata)
-	if err != nil {
-		return err
+	channel := make(chan enrichment, 1)
+
+	fmt.Println("before go: ", id)
+	go func() {
+		fmt.Println("start go: ", id)
+		response, err := enricher.FetchContentTargeting(publisherId, metadata)
+		fmt.Println("before chann: ", id)
+		channel <- enrichment{
+			response: response,
+			error: err,
+		}
+		fmt.Println("end go: ", id)
+	}()
+	fmt.Println("after go: ", id)
+
+	enrichmentResult := <- channel
+	fmt.Println("after channel: ", id)
+
+	if enrichmentResult.error != nil {
+		return enrichmentResult.error
 	}
 
+	targetingResponse := enrichmentResult.response
 	jwpsegs = GetAllJwpsegs(targetingResponse.Data)
 	if len(jwpsegs) == 0 {
 		return &TargetingFailed{
@@ -101,7 +124,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	return nil
 }
 
-func (enricher *requestEnricher) FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata) (*JWTargetingResponse, *TargetingFailed) {
+func (enricher *requestEnricher) FetchContentTargeting(publisherId string, contentMetadata jwContentMetadata) (*jwTargetingResponse, *TargetingFailed) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
@@ -127,7 +150,7 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 
 	defer resp.Body.Close()
 
-	targetingResponse := JWTargetingResponse{}
+	targetingResponse := jwTargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
@@ -135,6 +158,6 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 		}
 	}
 
-	fmt.Println("targeting resposne: ", targetingResponse)
+	fmt.Println("targeting response: ", targetingResponse)
 	return &targetingResponse, nil
 }
