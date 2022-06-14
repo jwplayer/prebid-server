@@ -74,6 +74,13 @@ func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 	return segments
 }
 
+func writeToKeywords(keywords *string, jwpsegs []string) {
+	if len(*keywords) > 0 {
+		*keywords += ","
+	}
+	*keywords += GetXandrKeywords(jwpsegs)
+}
+
 func GetXandrKeywords(jwpsegs []string) string {
 	if len(jwpsegs) == 0 {
 		return ""

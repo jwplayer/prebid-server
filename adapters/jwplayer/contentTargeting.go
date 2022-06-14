@@ -36,17 +36,29 @@ type JWTargetingData struct {
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
-func EnnrichRequest(request *openrtb2.BidRequest, publisherId string) {
-	if site := request.Site; site != nil {
-		Enrich(&site.Keywords, site.Content, publisherId)
-	}
+type requestEnricher struct {
+	httpClient *http.Client
+}
 
-	if app := request.App; app != nil {
-		Enrich(&app.Keywords, app.Content, publisherId)
+func BuildRequestEnricher(httpClient *http.Client) *requestEnricher {
+	return &requestEnricher{
+		httpClient: httpClient,
 	}
 }
 
-func Enrich(keywords *string, content *openrtb2.Content, publisherId string) error {
+func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, publisherId string) *TargetingFailed {
+	if site := request.Site; site != nil {
+		return enricher.enrich(&site.Keywords, site.Content, publisherId)
+	}
+
+	if app := request.App; app != nil {
+		return enricher.enrich(&app.Keywords, app.Content, publisherId)
+	}
+
+	return nil
+}
+
+func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, publisherId string) *TargetingFailed {
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)
@@ -68,7 +80,7 @@ func Enrich(keywords *string, content *openrtb2.Content, publisherId string) err
 		}
 	}
 
-	targetingResponse, err := FetchContentTargeting(publisherId, metadata)
+	targetingResponse, err := enricher.FetchContentTargeting(publisherId, metadata)
 	if err != nil {
 		return err
 	}
@@ -89,13 +101,23 @@ func Enrich(keywords *string, content *openrtb2.Content, publisherId string) err
 	return nil
 }
 
-func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata) (*JWTargetingResponse, error) {
+func (enricher *requestEnricher) FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata) (*JWTargetingResponse, *TargetingFailed) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
+
 	reqUrl := fmt.Sprintf("https://content-targeting-api.longtailvideo.com/property/%s/content_segments?content_url=%s&title=%s&description=%s", publisherId, mediaUrl, title, description)
-	resp, err := http.Get(reqUrl)
-	if err != nil {
+	httpReq, newReqErr := http.NewRequest("GET", reqUrl, nil)
+	if newReqErr != nil {
+		return nil, &TargetingFailed{
+			Message: fmt.Sprintf("Failed to instantiate request: %s", newReqErr.Error()),
+			code: HttpRequestInstantiationErrorCode,
+		}
+	}
+
+	resp, reqErr := enricher.httpClient.Do(httpReq)
+
+	if reqErr != nil {
 		statusCode := resp.StatusCode
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
@@ -113,12 +135,6 @@ func FetchContentTargeting(publisherId string, contentMetadata JWContentMetadata
 		}
 	}
 
+	fmt.Println("targeting resposne: ", targetingResponse)
 	return &targetingResponse, nil
-}
-
-func writeToKeywords(keywords *string, jwpsegs []string) {
-	if len(*keywords) > 0 {
-		*keywords += ","
-	}
-	*keywords += GetXandrKeywords(jwpsegs)
 }

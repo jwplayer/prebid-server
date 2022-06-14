@@ -5,10 +5,10 @@ import "github.com/prebid/prebid-server/errortypes"
 const (
 	MissingPublisherIdErrorCode = 301001
 	MissingMediaUrlErrorCode
-	EmptyTargetingResponse
 	EmptyTargetingSegments
-	BaseNetworkErrorCode = 302000
-	BaseDecodingErrorCode = 303000
+	HttpRequestInstantiationErrorCode = 302000
+	BaseNetworkErrorCode = 303000
+	BaseDecodingErrorCode = 304000
 )
 
 type TargetingFailed struct {
