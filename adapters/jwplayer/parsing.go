@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-func ParseContentMetadata(content openrtb2.Content) JWContentMetadata {
-	metadata := JWContentMetadata{
+func ParseContentMetadata(content openrtb2.Content) jwContentMetadata {
+	metadata := jwContentMetadata{
 		Url: content.URL,
 		Title: content.Title,
 	}
 
-	contentExt := JWContentExt{}
+	contentExt := jwContentExt{}
 	if error := json.Unmarshal(content.Ext, &contentExt); error == nil {
 		metadata.Description = contentExt.Description
 	}
@@ -31,7 +31,7 @@ func GetExistingJwpsegs(data []openrtb2.Data) []string {
 }
 
 func HasJwpsegs(datum openrtb2.Data) bool {
-	dataExt := JWDataExt{}
+	dataExt := jwDataExt{}
 	if error := json.Unmarshal(datum.Ext, &dataExt); error != nil {
 		return false
 	}
@@ -55,7 +55,7 @@ func GetAllJwpsegs(targeting JWTargetingData) []string {
 func MakeOrtbDatum(jwpsegs []string) (contentData openrtb2.Data) {
 	contentData.Name = jwplayerDomain
 	contentData.Segment = MakeOrtbSegments(jwpsegs)
-	dataExt := JWDataExt{
+	dataExt := jwDataExt{
 		Segtax: jwplayerSegtax,
 	}
 	contentData.Ext, _ = json.Marshal(dataExt)

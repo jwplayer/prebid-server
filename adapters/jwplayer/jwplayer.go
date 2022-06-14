@@ -30,7 +30,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 		},
 	}
 
-	enricher := BuildRequestEnricher(httpClient)
+	enricher := buildRequestEnricher(httpClient)
 
 	bidder := &JWPlayerAdapter{
 		endpoint: config.Endpoint,
@@ -41,7 +41,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 }
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
-	fmt.Println("request is made")
+	fmt.Println("request is made: ", request.ID)
 	var errors []error
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
@@ -90,19 +90,10 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		app.ID = ""
 	}
 
-	fmt.Println("start here")
 	// todo get publisher!!
-	go func(enricher *requestEnricher, request *openrtb2.BidRequest) {
-		fmt.Println("goo!!")
-		error := enricher.EnrichRequest(&requestCopy, "D9hUeD6O")
-		if error != nil {
-			fmt.Println(error)
-		}
-		fmt.Println("goo end")
-	}(a.enricher, &requestCopy)
+	a.enricher.EnrichRequest(&requestCopy, "D9hUeD6O")
 
-
-	fmt.Println("end here")
+	fmt.Println("Ready to make req ", request.ID)
 	requestJSON, err := json.Marshal(requestCopy)
 	if err != nil {
 		errors = append(errors, err)
