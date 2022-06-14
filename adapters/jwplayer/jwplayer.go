@@ -9,21 +9,39 @@ import (
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
+	"time"
 )
 
 type JWPlayerAdapter struct {
 	endpoint string
+	enricher *requestEnricher
 }
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
+	fmt.Println("build jwplayer!!")
+	//configuration is consistent with default client cache config
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			MaxConnsPerHost: 0,
+			MaxIdleConns: 10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout: time.Duration(50) * time.Millisecond,
+		},
+	}
+
+	enricher := BuildRequestEnricher(httpClient)
+
 	bidder := &JWPlayerAdapter{
 		endpoint: config.Endpoint,
+		enricher: enricher,
 	}
+
 	return bidder, nil
 }
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
+	fmt.Println("request is made")
 	var errors []error
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
@@ -71,9 +89,20 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
 		app.ID = ""
 	}
-	// todo get publisher!!
-	EnnrichRequest(&requestCopy, "D9hUeD6O")
 
+	fmt.Println("start here")
+	// todo get publisher!!
+	go func(enricher *requestEnricher, request *openrtb2.BidRequest) {
+		fmt.Println("goo!!")
+		error := enricher.EnrichRequest(&requestCopy, "D9hUeD6O")
+		if error != nil {
+			fmt.Println(error)
+		}
+		fmt.Println("goo end")
+	}(a.enricher, &requestCopy)
+
+
+	fmt.Println("end here")
 	requestJSON, err := json.Marshal(requestCopy)
 	if err != nil {
 		errors = append(errors, err)
