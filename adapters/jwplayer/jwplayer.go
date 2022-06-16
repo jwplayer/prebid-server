@@ -9,6 +9,7 @@ import (
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -51,8 +52,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 			errors = append(errors, parserError)
 		} else {
 			placementId := params.PlacementId
-			imp.TagID = placementId
-			imp.Ext = nil
+			prepareImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -101,8 +101,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		}
 	}
 
-	// todo get publisher!!
 	a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
+	prepareRequest(&requestCopy)
 
 	fmt.Println("Ready to make req ", request.ID)
 	requestJSON, err := json.Marshal(requestCopy)
@@ -176,6 +176,41 @@ func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	}
 
 	return &params, nil
+}
+
+func prepareImp(imp *openrtb2.Imp, placementId string) {
+	imp.TagID = placementId
+	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
+	imp.Ext = getAppnexusExt(placementId)
+	if imp.Video == nil {
+		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
+		imp.Video = &openrtb2.Video{}
+	}
+}
+
+func prepareRequest(request *openrtb2.BidRequest) {
+	if request.Device == nil {
+		// Per results obtained when testing the bid request to Xandr, $.device is mandatory
+		request.Device = &openrtb2.Device{}
+	}
+}
+
+func getAppnexusExt(placementId string) json.RawMessage {
+	id, conversionError := strconv.Atoi(placementId)
+	if conversionError != nil {
+		return nil
+	}
+	
+	appnexusExt := &openrtb_ext.ExtImpAppnexus{
+		PlacementId: id,
+	}
+	
+	jsonExt, jsonError := json.Marshal(appnexusExt)
+	if jsonError != nil {
+		return nil
+	}
+	
+	return jsonExt
 }
 
 type jwplayerPublisher struct {
