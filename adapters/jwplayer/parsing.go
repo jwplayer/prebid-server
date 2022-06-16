@@ -3,6 +3,7 @@ package jwplayer
 import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"net/url"
 	"strings"
 )
 
@@ -39,6 +40,11 @@ func HasJwpsegs(datum openrtb2.Data) bool {
 	return datum.Name == jwplayerDomain && dataExt.Segtax == jwplayerSegtax
 }
 
+func isValidMediaUrl(rawUrl string) bool {
+	_, error := url.Parse(rawUrl)
+	return error == nil
+}
+
 func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	jwpsegs := make([]string, len(segments))
 	for _, segment := range segments {
@@ -48,7 +54,7 @@ func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	return jwpsegs
 }
 
-func GetAllJwpsegs(targeting JWTargetingData) []string {
+func GetAllJwpsegs(targeting jwTargetingData) []string {
 	return append(targeting.BaseSegments, targeting.TargetingProfiles...)
 }
 
