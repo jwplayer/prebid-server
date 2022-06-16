@@ -78,7 +78,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	}
 
 	metadata := ParseContentMetadata(*content)
-	if metadata.Url == "" {
+	if isValidMediaUrl(metadata.Url) == false {
 		return &TargetingFailed{
 			Message: "Missing Media Url",
 			code: MissingMediaUrlErrorCode,
