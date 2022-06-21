@@ -23,10 +23,10 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	//configuration is consistent with default client cache config
 	httpClient := &http.Client{
 		Transport: &http.Transport{
-			MaxConnsPerHost: 0,
-			MaxIdleConns: 10,
+			MaxConnsPerHost:     0,
+			MaxIdleConns:        10,
 			MaxIdleConnsPerHost: 2,
-			IdleConnTimeout: time.Duration(50) * time.Millisecond,
+			IdleConnTimeout:     time.Duration(50) * time.Millisecond,
 		},
 	}
 
@@ -103,9 +103,10 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	prepareRequest(&requestCopy)
+	fmt.Println("req: ", requestCopy.Site.Keywords, requestCopy.Imp[0].Ext)
 
-	fmt.Println("Ready to make req ", request.ID)
 	requestJSON, err := json.Marshal(requestCopy)
+	fmt.Println("Ready to make req ", string(requestJSON))
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
@@ -126,11 +127,16 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 }
 
 func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+	fmt.Println("Make Bids called: ", string(requestData.Body))
+	fmt.Println("Headers: ", requestData.Headers)
 	if responseData.StatusCode == http.StatusNoContent {
+		fmt.Println("StatusNoContent")
+
 		return nil, nil
 	}
 
 	if responseData.StatusCode == http.StatusBadRequest {
+		fmt.Println("StatusBadRequest")
 		err := &errortypes.BadInput{
 			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
 		}
@@ -138,6 +144,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	}
 
 	if responseData.StatusCode != http.StatusOK {
+		fmt.Println("!Ok")
 		err := &errortypes.BadServerResponse{
 			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
 		}
@@ -145,6 +152,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	}
 
 	var response openrtb2.BidResponse
+	fmt.Println("Got response:", string(responseData.Body))
 	if err := json.Unmarshal(responseData.Body, &response); err != nil {
 		return nil, []error{err}
 	}
@@ -189,10 +197,20 @@ func prepareImp(imp *openrtb2.Imp, placementId string) {
 }
 
 func prepareRequest(request *openrtb2.BidRequest) {
-	if request.Device == nil {
-		// Per results obtained when testing the bid request to Xandr, $.device is mandatory
-		request.Device = &openrtb2.Device{}
-	}
+	//if request.Device == nil {
+	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
+	request.Device = &openrtb2.Device{}
+	//}
+}
+
+// copied from appnexus.go appnexusImpExtAppnexus
+type appnexusImpExtParams struct {
+	PlacementID int `json:"placement_id,omitempty"`
+}
+
+// copied from appnexus.go appnexusImpExt
+type appnexusImpExt struct {
+	Appnexus appnexusImpExtParams `json:"appnexus"`
 }
 
 func getAppnexusExt(placementId string) json.RawMessage {
@@ -200,22 +218,24 @@ func getAppnexusExt(placementId string) json.RawMessage {
 	if conversionError != nil {
 		return nil
 	}
-	
-	appnexusExt := &openrtb_ext.ExtImpAppnexus{
-		PlacementId: id,
+
+	appnexusExt := &appnexusImpExt{
+		Appnexus: appnexusImpExtParams{
+			PlacementID: id,
+		},
 	}
-	
+
 	jsonExt, jsonError := json.Marshal(appnexusExt)
 	if jsonError != nil {
 		return nil
 	}
-	
+
 	return jsonExt
 }
 
 type jwplayerPublisher struct {
 	PublisherId string `json:"publisherId,omitempty"`
-	SiteId string `json:"siteId,omitempty"`
+	SiteId      string `json:"siteId,omitempty"`
 }
 type publisherExt struct {
 	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
