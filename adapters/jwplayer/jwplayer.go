@@ -21,15 +21,6 @@ type ExtraInfo struct {
 	TargetingEndpoint string `json:"targeting_endpoint,omitempty"`
 }
 
-type jwplayerPublisher struct {
-	PublisherId string `json:"publisherId,omitempty"`
-	SiteId      string `json:"siteId,omitempty"`
-}
-
-type publisherExt struct {
-	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
-}
-
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
 	//configuration is consistent with default client cache config
@@ -122,6 +113,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
+	fmt.Println("Ready to make req ", string(requestJSON))
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
@@ -143,10 +135,13 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
+		fmt.Println("StatusNoContent")
+
 		return nil, nil
 	}
 
 	if responseData.StatusCode == http.StatusBadRequest {
+		fmt.Println("StatusBadRequest")
 		err := &errortypes.BadInput{
 			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
 		}
@@ -154,6 +149,7 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	}
 
 	if responseData.StatusCode != http.StatusOK {
+		fmt.Println("!Ok")
 		err := &errortypes.BadServerResponse{
 			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
 		}
@@ -161,6 +157,7 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	}
 
 	var response openrtb2.BidResponse
+	fmt.Println("Got response:", string(responseData.Body))
 	if err := json.Unmarshal(responseData.Body, &response); err != nil {
 		return nil, []error{err}
 	}
@@ -215,4 +212,21 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
 	request.Device = &openrtb2.Device{}
+}
+
+type jwplayerPublisher struct {
+	PublisherId string `json:"publisherId,omitempty"`
+	SiteId      string `json:"siteId,omitempty"`
+}
+type publisherExt struct {
+	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
+}
+
+func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
+	var pubExt publisherExt
+	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
+		return nil
+	}
+
+	return &pubExt.JWPlayer
 }
