@@ -7,13 +7,13 @@ const (
 	MissingMediaUrlErrorCode
 	EmptyTargetingSegments
 	HttpRequestInstantiationErrorCode = 302000
-	BaseNetworkErrorCode = 303000
-	BaseDecodingErrorCode = 304000
+	BaseNetworkErrorCode              = 303000
+	BaseDecodingErrorCode             = 304000
 )
 
 type TargetingFailed struct {
 	Message string
-	code int
+	code    int
 }
 
 func (err *TargetingFailed) Error() string {
