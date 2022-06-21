@@ -361,9 +361,9 @@ func TestTrimCookiesClosestExpirationDates(t *testing.T) {
 		{maxCookieSize: 0, expKeys: []string{"k1", "k2", "k3", "k4", "k5", "k6", "k7"}},    //2 unlimited size: don't trim, set
 		// failing doing to size differences across platforms
 		// {maxCookieSize: 800, expKeys: []string{"k1", "k2", "k3", "k4"}},                    //3 trim to size and set
-		{maxCookieSize: 500, expKeys: []string{"k1", "k3"}},                                //4 trim to size and set
-		{maxCookieSize: 200, expKeys: []string{}},                                          //5 insufficient size, trim to zero length and set
-		{maxCookieSize: -100, expKeys: []string{}},                                         //6 invalid size, trim to zero length and set
+		{maxCookieSize: 500, expKeys: []string{"k1", "k3"}}, //4 trim to size and set
+		{maxCookieSize: 200, expKeys: []string{}},           //5 insufficient size, trim to zero length and set
+		{maxCookieSize: -100, expKeys: []string{}},          //6 invalid size, trim to zero length and set
 	}
 	for i := range testCases {
 		processedCookie := writeThenRead(cookieToSend, testCases[i].maxCookieSize)

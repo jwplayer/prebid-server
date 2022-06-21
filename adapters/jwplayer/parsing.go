@@ -9,12 +9,13 @@ import (
 
 func ParseContentMetadata(content openrtb2.Content) jwContentMetadata {
 	metadata := jwContentMetadata{
-		Url: content.URL,
+		Url:   content.URL,
 		Title: content.Title,
 	}
 
 	contentExt := jwContentExt{}
 	if error := json.Unmarshal(content.Ext, &contentExt); error == nil {
+		println("karim: DESCRIPTION: ", contentExt.Description)
 		metadata.Description = contentExt.Description
 	}
 
@@ -94,6 +95,6 @@ func GetXandrKeywords(jwpsegs []string) string {
 
 	keyword := "jwpseg="
 	// expected format: jwpseg=1,jwpseg=2,jwpseg=3
-	keyword += strings.Join(jwpsegs, "," + keyword)
+	keyword += strings.Join(jwpsegs, ","+keyword)
 	return keyword
 }

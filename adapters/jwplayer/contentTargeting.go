@@ -12,8 +12,8 @@ const jwplayerSegtax = 502
 const jwplayerDomain = "jwplayer.com"
 
 type jwContentMetadata struct {
-	Url string
-	Title string
+	Url         string
+	Title       string
 	Description string
 }
 
@@ -27,7 +27,7 @@ type jwDataExt struct {
 
 type enrichment struct {
 	response *jwTargetingResponse
-	error *TargetingFailed
+	error    *TargetingFailed
 }
 
 type jwTargetingResponse struct {
@@ -36,8 +36,8 @@ type jwTargetingResponse struct {
 }
 
 type jwTargetingData struct {
-	MediaId string `json:"media_id"`
-	BaseSegments []string `json:"base_segments"`
+	MediaId           string   `json:"media_id"`
+	BaseSegments      []string `json:"base_segments"`
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
@@ -73,7 +73,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	if publisherId == "" {
 		return &TargetingFailed{
 			Message: "Missing PublisherId",
-			code: MissingPublisherIdErrorCode,
+			code:    MissingPublisherIdErrorCode,
 		}
 	}
 
@@ -81,7 +81,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	if isValidMediaUrl(metadata.Url) == false {
 		return &TargetingFailed{
 			Message: "Missing Media Url",
-			code: MissingMediaUrlErrorCode,
+			code:    MissingMediaUrlErrorCode,
 		}
 	}
 
@@ -94,13 +94,13 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 		fmt.Println("before chann: ", id)
 		channel <- enrichment{
 			response: response,
-			error: err,
+			error:    err,
 		}
 		fmt.Println("end go: ", id)
 	}()
 	fmt.Println("after go: ", id)
 
-	enrichmentResult := <- channel
+	enrichmentResult := <-channel
 	fmt.Println("after channel: ", id)
 
 	if enrichmentResult.error != nil {
@@ -112,7 +112,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	if len(jwpsegs) == 0 {
 		return &TargetingFailed{
 			Message: "Empty Targeting Segments",
-			code: EmptyTargetingSegments,
+			code:    EmptyTargetingSegments,
 		}
 	}
 
@@ -134,7 +134,7 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to instantiate request: %s", newReqErr.Error()),
-			code: HttpRequestInstantiationErrorCode,
+			code:    HttpRequestInstantiationErrorCode,
 		}
 	}
 
@@ -144,7 +144,7 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 		statusCode := resp.StatusCode
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
-			code: BaseNetworkErrorCode + statusCode,
+			code:    BaseNetworkErrorCode + statusCode,
 		}
 	}
 
@@ -154,7 +154,7 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
-			code: BaseDecodingErrorCode,
+			code:    BaseDecodingErrorCode,
 		}
 	}
 
