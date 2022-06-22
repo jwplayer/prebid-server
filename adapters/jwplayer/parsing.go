@@ -38,18 +38,24 @@ func HasJwpsegs(datum openrtb2.Data) bool {
 		return false
 	}
 
-	return datum.Name == jwplayerDomain && dataExt.Segtax == jwplayerSegtax
+	return datum.Name == jwplayerDomain && dataExt.Segtax == jwplayerSegtax && len(datum.Segment) > 0
 }
 
 func isValidMediaUrl(rawUrl string) bool {
-	_, error := url.Parse(rawUrl)
-	return error == nil
+	parsedUrl, error := url.ParseRequestURI(rawUrl)
+	if error != nil {
+		return false
+	}
+	isLocalFile := parsedUrl.Scheme == "file"
+	isLocalHost := parsedUrl.Opaque != ""
+	isRelativePath := parsedUrl.Host == ""
+	return !isLocalFile && !isRelativePath && !isLocalHost
 }
 
 func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	jwpsegs := make([]string, len(segments))
-	for _, segment := range segments {
-		jwpsegs = append(jwpsegs, segment.Value)
+	for index, segment := range segments {
+		jwpsegs[index] = segment.Value
 	}
 
 	return jwpsegs
@@ -71,20 +77,25 @@ func MakeOrtbDatum(jwpsegs []string) (contentData openrtb2.Data) {
 
 func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 	segments := make([]openrtb2.Segment, len(jwpsegs))
-	for _, jwpseg := range jwpsegs {
+	for index, jwpseg := range jwpsegs {
 		segment := openrtb2.Segment{
 			Value: jwpseg,
 		}
-		segments = append(segments, segment)
+		segments[index] = segment
 	}
 
 	return segments
 }
 
 func writeToKeywords(keywords *string, jwpsegs []string) {
+	if len(jwpsegs) == 0 {
+		return
+	}
+
 	if len(*keywords) > 0 {
 		*keywords += ","
 	}
+
 	*keywords += GetXandrKeywords(jwpsegs)
 }
 
