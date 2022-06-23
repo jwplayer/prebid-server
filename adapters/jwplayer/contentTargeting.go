@@ -71,29 +71,29 @@ func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*r
 	}, nil
 }
 
-func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, publisherId string) *TargetingFailed {
+func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
 	if site := request.Site; site != nil {
-		return enricher.enrich(&site.Keywords, site.Content, publisherId, request.ID)
+		return enricher.enrich(&site.Keywords, site.Content, siteId, request.ID)
 	}
 
 	if app := request.App; app != nil {
-		return enricher.enrich(&app.Keywords, app.Content, publisherId, request.ID)
+		return enricher.enrich(&app.Keywords, app.Content, siteId, request.ID)
 	}
 
 	return nil
 }
 
-func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, publisherId string, id string) *TargetingFailed {
+func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, siteId string, id string) *TargetingFailed {
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)
 		return nil
 	}
 
-	if publisherId == "" {
+	if siteId == "" {
 		return &TargetingFailed{
-			Message: "Missing PublisherId",
-			code:    MissingPublisherIdErrorCode,
+			Message: "Missing SiteId",
+			code:    MissingSiteIdErrorCode,
 		}
 	}
 
@@ -110,7 +110,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	fmt.Println("before go: ", id)
 	go func() {
 		fmt.Println("start go: ", id)
-		response, err := enricher.FetchContentTargeting(publisherId, metadata)
+		response, err := enricher.FetchContentTargeting(siteId, metadata)
 		fmt.Println("before chann: ", id)
 		channel <- enrichment{
 			response: response,
@@ -144,13 +144,13 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	return nil
 }
 
-func (enricher *requestEnricher) FetchContentTargeting(publisherId string, contentMetadata jwContentMetadata) (*jwTargetingResponse, *TargetingFailed) {
+func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMetadata jwContentMetadata) (*jwTargetingResponse, *TargetingFailed) {
 	mediaUrl := url.QueryEscape(contentMetadata.Url)
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
 
 	endpointParams := EndpointTemplateParams{
-		SiteId:      publisherId,
+		SiteId:      siteId,
 		MediaUrl:    mediaUrl,
 		Title:       title,
 		Description: description,
@@ -163,7 +163,7 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 			code:    MacroResolveErrorCode,
 		}
 	}
-	
+
 	httpReq, newReqErr := http.NewRequest("GET", reqUrl, nil)
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
