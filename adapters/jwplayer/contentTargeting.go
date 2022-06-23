@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/prebid/prebid-server/macros"
 	"net/http"
 	"net/url"
+	"text/template"
 )
 
 const jwplayerSegtax = 502
@@ -42,13 +44,31 @@ type jwTargetingData struct {
 }
 
 type requestEnricher struct {
-	httpClient *http.Client
+	httpClient       *http.Client
+	EndpointTemplate *template.Template
 }
 
-func buildRequestEnricher(httpClient *http.Client) *requestEnricher {
-	return &requestEnricher{
-		httpClient: httpClient,
+type EndpointTemplateParams struct {
+	SiteId      string
+	MediaUrl    string
+	Title       string
+	Description string
+}
+
+func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*requestEnricher, *TargetingFailed) {
+	template, err := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
+
+	if err != nil {
+		return nil, &TargetingFailed{
+			Message: fmt.Sprintf("unable to parse targeting url template: %v", err),
+			code:    EndpointTemplateErrorCode,
+		}
 	}
+
+	return &requestEnricher{
+		httpClient:       httpClient,
+		EndpointTemplate: template,
+	}, nil
 }
 
 func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, publisherId string) *TargetingFailed {
@@ -129,7 +149,21 @@ func (enricher *requestEnricher) FetchContentTargeting(publisherId string, conte
 	title := url.QueryEscape(contentMetadata.Title)
 	description := url.QueryEscape(contentMetadata.Description)
 
-	reqUrl := fmt.Sprintf("https://content-targeting-api.longtailvideo.com/property/%s/content_segments?content_url=%s&title=%s&description=%s", publisherId, mediaUrl, title, description)
+	endpointParams := EndpointTemplateParams{
+		SiteId:      publisherId,
+		MediaUrl:    mediaUrl,
+		Title:       title,
+		Description: description,
+	}
+
+	reqUrl, macroResolveErr := macros.ResolveMacros(enricher.EndpointTemplate, endpointParams)
+	if macroResolveErr != nil {
+		return nil, &TargetingFailed{
+			Message: "Failed to insert macros into targeting Url",
+			code:    MacroResolveErrorCode,
+		}
+	}
+	
 	httpReq, newReqErr := http.NewRequest("GET", reqUrl, nil)
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
