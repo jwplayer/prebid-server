@@ -3,12 +3,14 @@ package jwplayer
 import "github.com/prebid/prebid-server/errortypes"
 
 const (
-	MissingPublisherIdErrorCode = 301001
+	EndpointTemplateErrorCode   = 301001
+	MissingPublisherIdErrorCode = 302001
 	MissingMediaUrlErrorCode
 	EmptyTargetingSegments
-	HttpRequestInstantiationErrorCode = 302000
-	BaseNetworkErrorCode              = 303000
-	BaseDecodingErrorCode             = 304000
+	MacroResolveErrorCode
+	HttpRequestInstantiationErrorCode = 303000
+	BaseNetworkErrorCode              = 304000
+	BaseDecodingErrorCode             = 305000
 )
 
 type TargetingFailed struct {
