@@ -3,8 +3,8 @@ package jwplayer
 import "github.com/prebid/prebid-server/errortypes"
 
 const (
-	EndpointTemplateErrorCode   = 301001
-	MissingPublisherIdErrorCode = 302001
+	EndpointTemplateErrorCode = 301001
+	MissingSiteIdErrorCode    = 302001
 	MissingMediaUrlErrorCode
 	EmptyTargetingSegments
 	MacroResolveErrorCode
