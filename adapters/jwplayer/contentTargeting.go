@@ -173,8 +173,15 @@ func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMet
 	}
 
 	resp, reqErr := enricher.httpClient.Do(httpReq)
-
 	if reqErr != nil {
+		return nil, &TargetingFailed{
+			Message: fmt.Sprintf("Request Execution failure: %s", reqErr.Error()),
+			code:    HttpRequestExecutionErrorCode,
+		}
+	}
+
+	statusCode := resp.StatusCode
+	if statusCode != http.StatusOK {
 		statusCode := resp.StatusCode
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
