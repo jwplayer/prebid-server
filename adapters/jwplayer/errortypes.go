@@ -9,6 +9,7 @@ const (
 	EmptyTargetingSegments
 	MacroResolveErrorCode
 	HttpRequestInstantiationErrorCode = 303000
+	HttpRequestExecutionErrorCode     = 303050
 	BaseNetworkErrorCode              = 304000
 	BaseDecodingErrorCode             = 305000
 )
