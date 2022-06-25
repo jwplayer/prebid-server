@@ -6,7 +6,7 @@ const (
 	EndpointTemplateErrorCode = 301001
 	MissingSiteIdErrorCode    = 302001
 	MissingMediaUrlErrorCode
-	EmptyTargetingSegments
+	EmptyTargetingSegmentsErrorCode
 	MacroResolveErrorCode
 	HttpRequestInstantiationErrorCode = 303000
 	HttpRequestExecutionErrorCode     = 303050
