@@ -73,17 +73,17 @@ func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*r
 
 func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
 	if site := request.Site; site != nil {
-		return enricher.enrich(&site.Keywords, site.Content, siteId, request.ID)
+		return enricher.enrich(&site.Keywords, site.Content, siteId)
 	}
 
 	if app := request.App; app != nil {
-		return enricher.enrich(&app.Keywords, app.Content, siteId, request.ID)
+		return enricher.enrich(&app.Keywords, app.Content, siteId)
 	}
 
 	return nil
 }
 
-func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, siteId string, id string) *TargetingFailed {
+func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)
@@ -107,21 +107,15 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 
 	channel := make(chan enrichment, 1)
 
-	fmt.Println("before go: ", id)
 	go func() {
-		fmt.Println("start go: ", id)
 		response, err := enricher.FetchContentTargeting(siteId, metadata)
-		fmt.Println("before chann: ", id)
 		channel <- enrichment{
 			response: response,
 			error:    err,
 		}
-		fmt.Println("end go: ", id)
 	}()
-	fmt.Println("after go: ", id)
 
 	enrichmentResult := <-channel
-	fmt.Println("after channel: ", id)
 
 	if enrichmentResult.error != nil {
 		return enrichmentResult.error
@@ -132,7 +126,7 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	if len(jwpsegs) == 0 {
 		return &TargetingFailed{
 			Message: "Empty Targeting Segments",
-			code:    EmptyTargetingSegments,
+			code:    EmptyTargetingSegmentsErrorCode,
 		}
 	}
 
