@@ -15,7 +15,7 @@ import (
 
 type JWPlayerAdapter struct {
 	endpoint string
-	enricher *requestEnricher
+	enricher Enricher
 }
 
 type ExtraInfo struct {
@@ -35,6 +35,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	}
 
 	extraInfo := getExtraInfo(config.ExtraAdapterInfo)
+	var enricher Enricher
 	enricher, error := buildRequestEnricher(httpClient, extraInfo.targetingEndpoint)
 
 	if error != nil {
@@ -63,18 +64,17 @@ func getExtraInfo(v string) ExtraInfo {
 }
 
 func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
-	fmt.Println("request is made: ", request.ID)
 	var errors []error
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
 	for _, imp := range requestCopy.Imp {
-		params, parserError := parseBidderParams(imp)
+		params, parserError := a.parseBidderParams(imp)
 		if parserError != nil {
 			errors = append(errors, parserError)
 		} else {
 			placementId := params.PlacementId
-			prepareImp(&imp, placementId)
+			a.prepareImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -98,7 +98,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		site.ID = ""
 
 		if publisher := site.Publisher; publisher != nil {
-			preparePublisher(publisher)
+			a.preparePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
@@ -110,7 +110,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		app.ID = ""
 
 		if publisher := app.Publisher; publisher != nil {
-			preparePublisher(publisher)
+			a.preparePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
@@ -120,8 +120,11 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		siteId = publisherParams.SiteId
 	}
 
-	a.enricher.EnrichRequest(&requestCopy, siteId)
-	prepareRequest(&requestCopy)
+	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, siteId)
+	if enrichmentFailure != nil {
+		errors = append(errors, enrichmentFailure)
+	}
+	a.prepareRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
 	fmt.Println("Ready to make req ", string(requestJSON))
@@ -187,7 +190,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 
 // DistributionChannel
 
-func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
+func (a *JWPlayerAdapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	var impExt adapters.ExtImpBidder
 	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
 		return nil, err
@@ -201,7 +204,7 @@ func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	return &params, nil
 }
 
-func prepareImp(imp *openrtb2.Imp, placementId string) {
+func (a *JWPlayerAdapter) prepareImp(imp *openrtb2.Imp, placementId string) {
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = getAppnexusExt(placementId)
@@ -211,7 +214,7 @@ func prepareImp(imp *openrtb2.Imp, placementId string) {
 	}
 }
 
-func preparePublisher(publisher *openrtb2.Publisher) {
+func (a *JWPlayerAdapter) preparePublisher(publisher *openrtb2.Publisher) {
 	// per Xandr doc, if set, this should equal the Xandr publisher code.
 	// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
 	// It is best to remove, since placement code is set to imp.TagID
@@ -219,11 +222,10 @@ func preparePublisher(publisher *openrtb2.Publisher) {
 	publisher.ID = ""
 }
 
-func prepareRequest(request *openrtb2.BidRequest) {
+func (a *JWPlayerAdapter) prepareRequest(request *openrtb2.BidRequest) {
 	//if request.Device == nil {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
 	request.Device = &openrtb2.Device{}
-	//}
 }
 
 // copied from appnexus.go appnexusImpExtAppnexus
@@ -260,6 +262,7 @@ type jwplayerPublisher struct {
 	PublisherId string `json:"publisherId,omitempty"`
 	SiteId      string `json:"siteId,omitempty"`
 }
+
 type publisherExt struct {
 	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
 }
