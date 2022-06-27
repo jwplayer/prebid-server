@@ -75,7 +75,10 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	requestCopy.Imp = validImps
 
-	var publisherParams *jwplayerPublisher
+	publisherParams := &jwplayerPublisher{
+		SiteId:      "",
+		PublisherId: "",
+	}
 
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
