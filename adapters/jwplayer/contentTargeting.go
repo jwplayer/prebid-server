@@ -43,6 +43,10 @@ type jwTargetingData struct {
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
+type Enricher interface {
+	EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed
+}
+
 type requestEnricher struct {
 	httpClient       *http.Client
 	EndpointTemplate *template.Template
