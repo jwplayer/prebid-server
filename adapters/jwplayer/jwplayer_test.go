@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
-	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -12,13 +11,23 @@ import (
 )
 
 func getTestAdapter() adapters.Bidder {
-	bidderName := openrtb_ext.BidderName("jwplayer")
-	config := config.Adapter{
-		Endpoint:         "http://test.com/openrtb2",
-		ExtraAdapterInfo: "",
+	var mockEnricher Enricher = &MockEnricher{}
+	var testAdapter adapters.Bidder = &JWPlayerAdapter{
+		endpoint: "http://test.com/openrtb2",
+		enricher: mockEnricher,
 	}
-	a, _ := Builder(bidderName, config)
-	return a
+	return testAdapter
+}
+
+type MockEnricher struct {
+	Request *openrtb2.BidRequest
+	SiteId  string
+}
+
+func (enricher *MockEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+	enricher.Request = request
+	enricher.SiteId = siteId
+	return nil
 }
 
 func TestSingleRequest(t *testing.T) {
@@ -144,6 +153,54 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 	json.Unmarshal(processedRequest.Body, processedRequestJSON)
 	assert.NotNil(t, processedRequestJSON.Device)
 	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
+}
+
+func TestEnrichmentCall(t *testing.T) {
+	enrichmentSpy := &MockEnricher{}
+	var mockEnricher Enricher = enrichmentSpy
+	var a adapters.Bidder = &JWPlayerAdapter{
+		endpoint: "http://test.com/openrtb2",
+		enricher: mockEnricher,
+	}
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId","siteId": "testSiteId"}}`),
+			},
+		},
+	}
+
+	a.MakeRequests(request, &reqInfo)
+	assert.Equal(t, "testSiteId", enrichmentSpy.SiteId)
+
+	request = &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		App: &openrtb2.App{
+			Publisher: &openrtb2.Publisher{},
+		},
+	}
+
+	a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, enrichmentSpy.SiteId)
 }
 
 func TestOpenRTBEmptyResponse(t *testing.T) {
