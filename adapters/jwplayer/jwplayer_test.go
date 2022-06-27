@@ -4,18 +4,26 @@ import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
 )
 
-func TestSingleRequest(t *testing.T) {
-	var a JWPlayerAdapter
-	a.endpoint = "http://test.com/openrtb2"
+func getTestAdapter() adapters.Bidder {
+	bidderName := openrtb_ext.BidderName("jwplayer")
+	config := config.Adapter{
+		Endpoint:         "http://test.com/openrtb2",
+		ExtraAdapterInfo: "",
+	}
+	a, _ := Builder(bidderName, config)
+	return a
+}
 
+func TestSingleRequest(t *testing.T) {
+	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
-	reqInfo.PbsEntryPoint = "video"
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -30,14 +38,14 @@ func TestSingleRequest(t *testing.T) {
 		Site: &openrtb2.Site{},
 	}
 
-	results, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
-	assert.Len(t, results, 1, "Only one request should be returned")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
-	result := results[0]
-	resultJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(result.Body, resultJSON)
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
 
 	expectedJSON := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -56,11 +64,8 @@ func TestSingleRequest(t *testing.T) {
 }
 
 func TestInvalidImpExt(t *testing.T) {
-	var a JWPlayerAdapter
-	a.endpoint = "http://test.com/openrtb2"
-
+	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
-	reqInfo.PbsEntryPoint = "video"
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id_1",
@@ -77,11 +82,8 @@ func TestInvalidImpExt(t *testing.T) {
 }
 
 func TestIdsAreRemoved(t *testing.T) {
-	var a JWPlayerAdapter
-	a.endpoint = "http://test.com/openrtb2"
-
+	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
-	reqInfo.PbsEntryPoint = "video"
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -103,12 +105,12 @@ func TestIdsAreRemoved(t *testing.T) {
 		},
 	}
 
-	results, err := a.MakeRequests(request, &reqInfo)
+	processedRequest, err := a.MakeRequests(request, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
-	assert.Len(t, results, 1, "Only one request should be returned")
+	assert.Len(t, processedRequest, 1, "Only one request should be returned")
 
-	result := results[0]
+	result := processedRequest[0]
 	resultJSON := &openrtb2.BidRequest{}
 	json.Unmarshal(result.Body, resultJSON)
 
@@ -122,11 +124,33 @@ func TestIdsAreRemoved(t *testing.T) {
 	assert.Empty(t, resultJSON.App.ID, "App.id should be removed")
 }
 
+func TestMandatoryRequestParamsAreAdded(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	assert.NotNil(t, processedRequestJSON.Device)
+	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
+}
+
 func TestOpenRTBEmptyResponse(t *testing.T) {
 	httpResp := &adapters.ResponseData{
 		StatusCode: http.StatusNoContent,
 	}
-	bidder := new(JWPlayerAdapter)
+	bidder := getTestAdapter()
 	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
 
 	assert.Nil(t, bidResponse, "Expected empty response")
@@ -148,7 +172,7 @@ func TestOpenRTBSurpriseResponse(t *testing.T) {
 	httpResp := &adapters.ResponseData{
 		StatusCode: http.StatusAccepted,
 	}
-	bidder := new(JWPlayerAdapter)
+	bidder := getTestAdapter()
 	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
 
 	assert.Nil(t, bidResponse, "Expected empty response")
@@ -184,7 +208,7 @@ func TestOpenRTBStandardResponse(t *testing.T) {
 		Body:       []byte(`{"id":"test-request-id","seatbid":[{"bid":[{"id":"1234567890","impid":"test-imp-id","price": 2,"crid":"4122982","adm":"some ad","h": 50,"w": 320,"ext":{"bidder":{"appnexus":{"targeting": {"key": "rpfl_2763", "values":["43_tier0100"]},"mime": "text/html","size_id": 43}}}}]}]}`),
 	}
 
-	bidder := new(JWPlayerAdapter)
+	bidder := getTestAdapter()
 	bidResponse, errs := bidder.MakeBids(request, reqData, httpResp)
 
 	assert.NotNil(t, bidResponse, "Expected not empty response")

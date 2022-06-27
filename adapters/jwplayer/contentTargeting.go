@@ -84,6 +84,13 @@ func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, sit
 }
 
 func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
+	if content == nil {
+		return &TargetingFailed{
+			Message: "Missing $.content",
+			code:    MissingContentBlockErrorCode,
+		}
+	}
+
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
 		writeToKeywords(keywords, jwpsegs)

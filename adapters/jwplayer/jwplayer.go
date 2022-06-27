@@ -89,7 +89,10 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	requestCopy.Imp = validImps
 
-	var publisherParams *jwplayerPublisher
+	publisherParams := &jwplayerPublisher{
+		SiteId:      "",
+		PublisherId: "",
+	}
 
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
@@ -125,7 +128,6 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	prepareRequest(&requestCopy)
-	fmt.Println("req: ", requestCopy.Site.Keywords, requestCopy.Imp[0].Ext)
 
 	requestJSON, err := json.Marshal(requestCopy)
 	fmt.Println("Ready to make req ", string(requestJSON))
