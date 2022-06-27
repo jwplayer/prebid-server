@@ -89,10 +89,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	requestCopy.Imp = validImps
 
-	publisherParams := &jwplayerPublisher{
-		SiteId:      "",
-		PublisherId: "",
-	}
+	var publisherParams *jwplayerPublisher
 
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
@@ -101,11 +98,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		site.ID = ""
 
 		if publisher := site.Publisher; publisher != nil {
-			// per Xandr doc, if set, this should equal the Xandr publisher code.
-			// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
-			// It is best to remove, since placement code is set to imp.TagID
-			// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
-			publisher.ID = ""
+			preparePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
@@ -117,16 +110,17 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		app.ID = ""
 
 		if publisher := app.Publisher; publisher != nil {
-			// per Xandr doc, if set, this should equal the Xandr publisher code.
-			// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
-			// It is best to remove, since placement code is set to imp.TagID
-			// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
-			publisher.ID = ""
+			preparePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
 
-	a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
+	siteId := ""
+	if publisherParams != nil {
+		siteId = publisherParams.SiteId
+	}
+
+	a.enricher.EnrichRequest(&requestCopy, siteId)
 	prepareRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
@@ -151,11 +145,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 }
 
 func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
-	fmt.Println("Make Bids called: ", string(requestData.Body))
-	fmt.Println("Headers: ", requestData.Headers)
 	if responseData.StatusCode == http.StatusNoContent {
-		fmt.Println("StatusNoContent")
-
 		return nil, nil
 	}
 
@@ -176,7 +166,6 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	}
 
 	var response openrtb2.BidResponse
-	fmt.Println("Got response:", string(responseData.Body))
 	if err := json.Unmarshal(responseData.Body, &response); err != nil {
 		return nil, []error{err}
 	}
@@ -195,6 +184,8 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 
 	return bidderResponse, nil
 }
+
+// DistributionChannel
 
 func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	var impExt adapters.ExtImpBidder
@@ -218,6 +209,14 @@ func prepareImp(imp *openrtb2.Imp, placementId string) {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
 	}
+}
+
+func preparePublisher(publisher *openrtb2.Publisher) {
+	// per Xandr doc, if set, this should equal the Xandr publisher code.
+	// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
+	// It is best to remove, since placement code is set to imp.TagID
+	// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
+	publisher.ID = ""
 }
 
 func prepareRequest(request *openrtb2.BidRequest) {
