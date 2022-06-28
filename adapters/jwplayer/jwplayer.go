@@ -19,7 +19,7 @@ type JWPlayerAdapter struct {
 }
 
 type ExtraInfo struct {
-	targetingEndpoint string `json:"targeting_endpoint,omitempty"`
+	TargetingEndpoint string `json:"targeting_endpoint,omitempty"`
 }
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
@@ -36,7 +36,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 
 	extraInfo := getExtraInfo(config.ExtraAdapterInfo)
 	var enricher Enricher
-	enricher, error := buildRequestEnricher(httpClient, extraInfo.targetingEndpoint)
+	enricher, error := buildRequestEnricher(httpClient, extraInfo.TargetingEndpoint)
 
 	if error != nil {
 		fmt.Println("Error making request enricher!")
@@ -56,8 +56,8 @@ func getExtraInfo(v string) ExtraInfo {
 		extraInfo = ExtraInfo{}
 	}
 
-	if extraInfo.targetingEndpoint == "" {
-		extraInfo.targetingEndpoint = "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
+	if extraInfo.TargetingEndpoint == "" {
+		extraInfo.TargetingEndpoint = "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
 	}
 
 	return extraInfo
