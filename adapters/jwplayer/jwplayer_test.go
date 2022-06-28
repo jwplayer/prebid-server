@@ -12,7 +12,7 @@ import (
 
 func getTestAdapter() adapters.Bidder {
 	var mockEnricher Enricher = &MockEnricher{}
-	var testAdapter adapters.Bidder = &JWPlayerAdapter{
+	var testAdapter adapters.Bidder = &Adapter{
 		endpoint: "http://test.com/openrtb2",
 		enricher: mockEnricher,
 	}
@@ -158,7 +158,7 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 func TestEnrichmentCall(t *testing.T) {
 	enrichmentSpy := &MockEnricher{}
 	var mockEnricher Enricher = enrichmentSpy
-	var a adapters.Bidder = &JWPlayerAdapter{
+	var a adapters.Bidder = &Adapter{
 		endpoint: "http://test.com/openrtb2",
 		enricher: mockEnricher,
 	}
@@ -278,16 +278,4 @@ func TestOpenRTBStandardResponse(t *testing.T) {
 
 	theBid := bidResponse.Bids[0].Bid
 	assert.Equal(t, "1234567890", theBid.ID, "Bad bid ID. Expected %s, got %s", "1234567890", theBid.ID)
-}
-
-func TestGetExtraInfo(t *testing.T) {
-	extraInfo := getExtraInfo("{\"targeting_endpoint\": \"targetingUrl\"}")
-	assert.Equal(t, "targetingUrl", extraInfo.TargetingEndpoint)
-
-	defaultTargetingUrl := "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
-	extraInfo = getExtraInfo("{/")
-	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
-
-	extraInfo = getExtraInfo("{}")
-	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 }
