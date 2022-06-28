@@ -9,17 +9,25 @@ import (
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
-	"strconv"
 	"time"
 )
 
-type JWPlayerAdapter struct {
+type Adapter struct {
 	endpoint string
 	enricher Enricher
 }
 
 type ExtraInfo struct {
 	TargetingEndpoint string `json:"targeting_endpoint,omitempty"`
+}
+
+type jwplayerPublisher struct {
+	PublisherId string `json:"publisherId,omitempty"`
+	SiteId      string `json:"siteId,omitempty"`
+}
+
+type publisherExt struct {
+	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
 }
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
@@ -34,15 +42,15 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 		},
 	}
 
-	extraInfo := getExtraInfo(config.ExtraAdapterInfo)
+	extraInfo := parseExtraInfo(config.ExtraAdapterInfo)
 	var enricher Enricher
-	enricher, error := buildRequestEnricher(httpClient, extraInfo.TargetingEndpoint)
+	enricher, enricherBuildError := buildRequestEnricher(httpClient, extraInfo.TargetingEndpoint)
 
-	if error != nil {
-		fmt.Println("Error making request enricher!")
+	if enricherBuildError != nil {
+		fmt.Printf("Warning: a failure occured when building the Enricher: %s\n", enricherBuildError)
 	}
 
-	bidder := &JWPlayerAdapter{
+	bidder := &Adapter{
 		endpoint: config.Endpoint,
 		enricher: enricher,
 	}
@@ -50,20 +58,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	return bidder, nil
 }
 
-func getExtraInfo(v string) ExtraInfo {
-	var extraInfo ExtraInfo
-	if err := json.Unmarshal([]byte(v), &extraInfo); err != nil {
-		extraInfo = ExtraInfo{}
-	}
-
-	if extraInfo.TargetingEndpoint == "" {
-		extraInfo.TargetingEndpoint = "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
-	}
-
-	return extraInfo
-}
-
-func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
+func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
@@ -74,7 +69,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 			errors = append(errors, parserError)
 		} else {
 			placementId := params.PlacementId
-			a.prepareImp(&imp, placementId)
+			a.sanitizeImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -98,7 +93,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		site.ID = ""
 
 		if publisher := site.Publisher; publisher != nil {
-			a.preparePublisher(publisher)
+			a.sanitizePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
@@ -110,7 +105,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		app.ID = ""
 
 		if publisher := app.Publisher; publisher != nil {
-			a.preparePublisher(publisher)
+			a.sanitizePublisher(publisher)
 			publisherParams = parsePublisherParams(*publisher)
 		}
 	}
@@ -124,7 +119,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
-	a.prepareRequest(&requestCopy)
+	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
 	fmt.Println("Ready to make req ", string(requestJSON))
@@ -147,13 +142,12 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	return []*adapters.RequestData{requestData}, errors
 }
 
-func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
 
 	if responseData.StatusCode == http.StatusBadRequest {
-		fmt.Println("StatusBadRequest")
 		err := &errortypes.BadInput{
 			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
 		}
@@ -161,7 +155,6 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	}
 
 	if responseData.StatusCode != http.StatusOK {
-		fmt.Println("!Ok")
 		err := &errortypes.BadServerResponse{
 			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
 		}
@@ -188,9 +181,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	return bidderResponse, nil
 }
 
-// DistributionChannel
-
-func (a *JWPlayerAdapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
+func (a *Adapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	var impExt adapters.ExtImpBidder
 	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
 		return nil, err
@@ -204,7 +195,7 @@ func (a *JWPlayerAdapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpE
 	return &params, nil
 }
 
-func (a *JWPlayerAdapter) prepareImp(imp *openrtb2.Imp, placementId string) {
+func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = getAppnexusExt(placementId)
@@ -214,7 +205,7 @@ func (a *JWPlayerAdapter) prepareImp(imp *openrtb2.Imp, placementId string) {
 	}
 }
 
-func (a *JWPlayerAdapter) preparePublisher(publisher *openrtb2.Publisher) {
+func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 	// per Xandr doc, if set, this should equal the Xandr publisher code.
 	// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
 	// It is best to remove, since placement code is set to imp.TagID
@@ -222,56 +213,8 @@ func (a *JWPlayerAdapter) preparePublisher(publisher *openrtb2.Publisher) {
 	publisher.ID = ""
 }
 
-func (a *JWPlayerAdapter) prepareRequest(request *openrtb2.BidRequest) {
+func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 	//if request.Device == nil {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
 	request.Device = &openrtb2.Device{}
-}
-
-// copied from appnexus.go appnexusImpExtAppnexus
-type appnexusImpExtParams struct {
-	PlacementID int `json:"placement_id,omitempty"`
-}
-
-// copied from appnexus.go appnexusImpExt
-type appnexusImpExt struct {
-	Appnexus appnexusImpExtParams `json:"appnexus"`
-}
-
-func getAppnexusExt(placementId string) json.RawMessage {
-	id, conversionError := strconv.Atoi(placementId)
-	if conversionError != nil {
-		return nil
-	}
-
-	appnexusExt := &appnexusImpExt{
-		Appnexus: appnexusImpExtParams{
-			PlacementID: id,
-		},
-	}
-
-	jsonExt, jsonError := json.Marshal(appnexusExt)
-	if jsonError != nil {
-		return nil
-	}
-
-	return jsonExt
-}
-
-type jwplayerPublisher struct {
-	PublisherId string `json:"publisherId,omitempty"`
-	SiteId      string `json:"siteId,omitempty"`
-}
-
-type publisherExt struct {
-	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
-}
-
-func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
-	var pubExt publisherExt
-	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
-		return nil
-	}
-
-	return &pubExt.JWPlayer
 }

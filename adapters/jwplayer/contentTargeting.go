@@ -4,40 +4,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
-	"github.com/prebid/prebid-server/macros"
 	"net/http"
-	"net/url"
 	"text/template"
 )
 
 const jwplayerSegtax = 502
 const jwplayerDomain = "jwplayer.com"
 
-type jwContentMetadata struct {
+type ContentMetadata struct {
 	Url         string
 	Title       string
 	Description string
 }
 
-type jwContentExt struct {
+type ContentExt struct {
 	Description string `json:"description"`
 }
 
-type jwDataExt struct {
+type DataExt struct {
 	Segtax int `json:"segtax"`
 }
 
-type enrichment struct {
-	response *jwTargetingResponse
+type TargetingOutcome struct {
+	response *TargetingResponse
 	error    *TargetingFailed
 }
 
-type jwTargetingResponse struct {
-	Uuid string          `json:"uuid"`
-	Data jwTargetingData `json:"data"`
+type TargetingResponse struct {
+	Uuid string        `json:"uuid"`
+	Data TargetingData `json:"data"`
 }
 
-type jwTargetingData struct {
+type TargetingData struct {
 	MediaId           string   `json:"media_id"`
 	BaseSegments      []string `json:"base_segments"`
 	TargetingProfiles []string `json:"targeting_profiles"`
@@ -47,7 +45,7 @@ type Enricher interface {
 	EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed
 }
 
-type requestEnricher struct {
+type RequestEnricher struct {
 	httpClient       *http.Client
 	EndpointTemplate *template.Template
 }
@@ -59,38 +57,41 @@ type EndpointTemplateParams struct {
 	Description string
 }
 
-func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*requestEnricher, *TargetingFailed) {
-	template, err := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
-
-	if err != nil {
-		return nil, &TargetingFailed{
-			Message: fmt.Sprintf("unable to parse targeting url template: %v", err),
+func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*RequestEnricher, *TargetingFailed) {
+	template, parseError := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
+	var buildError TargetingFailed
+	if parseError != nil {
+		buildError = TargetingFailed{
+			Message: fmt.Sprintf("Unable to parse targeting url template: %v", parseError),
 			code:    EndpointTemplateErrorCode,
 		}
 	}
 
-	return &requestEnricher{
+	return &RequestEnricher{
 		httpClient:       httpClient,
 		EndpointTemplate: template,
-	}, nil
+	}, &buildError
 }
 
-func (enricher *requestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+func (enricher *RequestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
 	if site := request.Site; site != nil {
-		return enricher.enrich(&site.Keywords, site.Content, siteId)
+		return enricher.enrichFields(&site.Keywords, site.Content, siteId)
 	}
 
 	if app := request.App; app != nil {
-		return enricher.enrich(&app.Keywords, app.Content, siteId)
+		return enricher.enrichFields(&app.Keywords, app.Content, siteId)
 	}
 
-	return nil
+	return &TargetingFailed{
+		Message: "Missing request.{site|app}",
+		code:    MissingDistributionChannelErrorCode,
+	}
 }
 
-func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
+func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
 	if content == nil {
 		return &TargetingFailed{
-			Message: "Missing $.content",
+			Message: "Missing request.{site|app}.content",
 			code:    MissingContentBlockErrorCode,
 		}
 	}
@@ -103,36 +104,51 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 
 	if siteId == "" {
 		return &TargetingFailed{
-			Message: "Missing SiteId",
+			Message: "Missing publisher.ext.jwplayer.SiteId",
 			code:    MissingSiteIdErrorCode,
+		}
+	}
+
+	if enricher.EndpointTemplate == nil {
+		return &TargetingFailed{
+			Message: "Empty template",
+			code:    EmptyTemplateErrorCode,
 		}
 	}
 
 	metadata := ParseContentMetadata(*content)
 	if isValidMediaUrl(metadata.Url) == false {
 		return &TargetingFailed{
-			Message: "Missing Media Url",
+			Message: "Invalid Media Url",
 			code:    MissingMediaUrlErrorCode,
 		}
 	}
 
-	channel := make(chan enrichment, 1)
+	targetingUrl := buildTargetingEndpoint(enricher.EndpointTemplate, siteId, metadata)
+	if targetingUrl == "" {
+		return &TargetingFailed{
+			Message: "Failed to build the targeting Url",
+			code:    TargetingUrlErrorCode,
+		}
+	}
+
+	channel := make(chan TargetingOutcome, 1)
 
 	go func() {
-		response, err := enricher.FetchContentTargeting(siteId, metadata)
-		channel <- enrichment{
+		response, err := enricher.fetchContentTargeting(targetingUrl)
+		channel <- TargetingOutcome{
 			response: response,
 			error:    err,
 		}
 	}()
 
-	enrichmentResult := <-channel
+	targetingOutcome := <-channel
 
-	if enrichmentResult.error != nil {
-		return enrichmentResult.error
+	if targetingOutcome.error != nil {
+		return targetingOutcome.error
 	}
 
-	targetingResponse := enrichmentResult.response
+	targetingResponse := targetingOutcome.response
 	jwpsegs = GetAllJwpsegs(targetingResponse.Data)
 	if len(jwpsegs) == 0 {
 		return &TargetingFailed{
@@ -149,27 +165,8 @@ func (enricher *requestEnricher) enrich(keywords *string, content *openrtb2.Cont
 	return nil
 }
 
-func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMetadata jwContentMetadata) (*jwTargetingResponse, *TargetingFailed) {
-	mediaUrl := url.QueryEscape(contentMetadata.Url)
-	title := url.QueryEscape(contentMetadata.Title)
-	description := url.QueryEscape(contentMetadata.Description)
-
-	endpointParams := EndpointTemplateParams{
-		SiteId:      siteId,
-		MediaUrl:    mediaUrl,
-		Title:       title,
-		Description: description,
-	}
-
-	reqUrl, macroResolveErr := macros.ResolveMacros(enricher.EndpointTemplate, endpointParams)
-	if macroResolveErr != nil {
-		return nil, &TargetingFailed{
-			Message: "Failed to insert macros into targeting Url",
-			code:    MacroResolveErrorCode,
-		}
-	}
-
-	httpReq, newReqErr := http.NewRequest("GET", reqUrl, nil)
+func (enricher *RequestEnricher) fetchContentTargeting(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
+	httpReq, newReqErr := http.NewRequest("GET", targetingUrl, nil)
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to instantiate request: %s", newReqErr.Error()),
@@ -177,17 +174,16 @@ func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMet
 		}
 	}
 
-	resp, reqErr := enricher.httpClient.Do(httpReq)
-	if reqErr != nil {
+	resp, reqFail := enricher.httpClient.Do(httpReq)
+	if reqFail != nil {
 		return nil, &TargetingFailed{
-			Message: fmt.Sprintf("Request Execution failure: %s", reqErr.Error()),
+			Message: fmt.Sprintf("Request Execution failure: %s", reqFail.Error()),
 			code:    HttpRequestExecutionErrorCode,
 		}
 	}
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		statusCode := resp.StatusCode
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
 			code:    BaseNetworkErrorCode + statusCode,
@@ -196,7 +192,7 @@ func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMet
 
 	defer resp.Body.Close()
 
-	targetingResponse := jwTargetingResponse{}
+	targetingResponse := TargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
@@ -204,6 +200,5 @@ func (enricher *requestEnricher) FetchContentTargeting(siteId string, contentMet
 		}
 	}
 
-	fmt.Println("targeting response: ", targetingResponse)
 	return &targetingResponse, nil
 }

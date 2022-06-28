@@ -7,9 +7,21 @@ import (
 	"testing"
 )
 
+func TestGetExtraInfo(t *testing.T) {
+	extraInfo := parseExtraInfo("{\"targeting_endpoint\": \"targetingUrl\"}")
+	assert.Equal(t, "targetingUrl", extraInfo.TargetingEndpoint)
+
+	defaultTargetingUrl := "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
+	extraInfo = parseExtraInfo("{/")
+	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
+
+	extraInfo = parseExtraInfo("{}")
+	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
+}
+
 func TestContentMetadataParseSuccess(t *testing.T) {
 	description := "Test Description"
-	descriptionExt, _ := json.Marshal(jwContentExt{
+	descriptionExt, _ := json.Marshal(ContentExt{
 		Description: description,
 	})
 	content := openrtb2.Content{
@@ -32,7 +44,7 @@ func TestGetExistingJwpsegs(t *testing.T) {
 	externalData2 := openrtb2.Data{Name: "external number 2", Segment: externalSegments2}
 
 	jwSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}}
-	dataExt := jwDataExt{Segtax: 502}
+	dataExt := DataExt{Segtax: 502}
 	ext, _ := json.Marshal(dataExt)
 	jwData := openrtb2.Data{Name: "jwplayer.com", Segment: jwSegments, Ext: ext}
 
@@ -41,7 +53,7 @@ func TestGetExistingJwpsegs(t *testing.T) {
 
 	externalSegments4 := []openrtb2.Segment{{Value: "5"}, {Value: "6"}}
 	dataWithWrongName := openrtb2.Data{Name: "other.com", Segment: externalSegments4, Ext: ext}
-	
+
 	dataWithEmptySegments := openrtb2.Data{Name: "jwplayer.com", Ext: ext}
 
 	jwpsegs := GetExistingJwpsegs([]openrtb2.Data{externalData1, dataWithoutSegtax, dataWithWrongName, dataWithEmptySegments, jwData, externalData2})
@@ -55,7 +67,7 @@ func TestHasJwpsegs(t *testing.T) {
 	segments := []openrtb2.Segment{{
 		Value: "88888888",
 	}}
-	jwDatumExt, _ := json.Marshal(jwDataExt{Segtax: jwplayerSegtax})
+	jwDatumExt, _ := json.Marshal(DataExt{Segtax: jwplayerSegtax})
 	datum := openrtb2.Data{
 		Name:    "jwplayer.com",
 		Segment: segments,
@@ -68,7 +80,7 @@ func TestHasJwpsegs(t *testing.T) {
 	assert.False(t, HasJwpsegs(datum))
 
 	datum.Name = "jwplayer.com"
-	datum.Ext, _ = json.Marshal(jwContentExt{Description: "descr"})
+	datum.Ext, _ = json.Marshal(ContentExt{Description: "descr"})
 	assert.False(t, HasJwpsegs(datum))
 
 	datum.Ext = jwDatumExt
@@ -104,7 +116,7 @@ func TestParseJwpsegs(t *testing.T) {
 }
 
 func TestGetAllJwpsegs(t *testing.T) {
-	targetingData := jwTargetingData{
+	targetingData := TargetingData{
 		BaseSegments:      []string{"1", "2", "3"},
 		TargetingProfiles: []string{"4", "5"},
 	}
@@ -122,7 +134,7 @@ func TestMakeOrtbDatum(t *testing.T) {
 
 	assert.Equal(t, datum.Name, "jwplayer.com")
 
-	var dataExt jwDataExt
+	var dataExt DataExt
 	json.Unmarshal(datum.Ext, &dataExt)
 	assert.Equal(t, dataExt.Segtax, 502)
 
