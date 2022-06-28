@@ -9,7 +9,8 @@ import (
 	"testing"
 )
 
-func TestFetchContentTargetingSuccessful(t *testing.T) {
+// EmptyTemplateErrorCode HttpRequestInstantiationErrorCode HttpRequestExecutionErrorCode
+func TestSuccessful(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(http.StatusOK)
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2", "3", "4"], "targeting_profiles": ["5", "6", "7", "8"]}}`))
@@ -20,27 +21,196 @@ func TestFetchContentTargetingSuccessful(t *testing.T) {
 
 	assert.Empty(t, failure)
 
-	metadata := jwContentMetadata{
-		Url:         "http://www.testUrl.com/media.mp4",
-		Title:       "testTitle",
-		Description: "testDesc",
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		App: &openrtb2.App{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
 	}
 
-	response, fetchError := enricher.FetchContentTargeting("testSiteId", metadata)
-	assert.Empty(t, fetchError)
-	assert.Equal(t, response.Uuid, "test_uuid")
-	assert.Equal(t, response.Data.MediaId, "test_id")
+	enrichmentFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, enrichmentFailure)
+	assert.Equal(t, "jwpseg=1,jwpseg=2,jwpseg=3,jwpseg=4,jwpseg=5,jwpseg=6,jwpseg=7,jwpseg=8", request.App.Keywords)
+	datum := request.App.Content.Data[0]
+	assert.Equal(t, "jwplayer.com", datum.Name)
+	assert.Len(t, datum.Segment, 8)
+	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}, {Value: "4"}, {Value: "5"}, {Value: "6"}, {Value: "7"}, {Value: "8"}}
+	assert.ElementsMatch(t, datum.Segment, expectedSegments)
 
-	assert.Len(t, response.Data.TargetingProfiles, 4)
-	expectedTpis := []string{"5", "6", "7", "8"}
-	assert.ElementsMatch(t, response.Data.TargetingProfiles, expectedTpis)
-
-	assert.Len(t, response.Data.BaseSegments, 4)
-	expectedBaseSegs := []string{"1", "2", "3", "4"}
-	assert.ElementsMatch(t, response.Data.BaseSegments, expectedBaseSegs)
+	expectedExt := DataExt{Segtax: 502}
+	datumExt := DataExt{}
+	json.Unmarshal(datum.Ext, &datumExt)
+	assert.Equal(t, expectedExt, datumExt)
 }
 
-func TestFetchContentTargetingDecodeError(t *testing.T) {
+func TestSuccessfulAppendsToKeywords(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		respWriter.WriteHeader(200)
+		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
+	}))
+	defer server.Close()
+	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Keywords: "existingKey=value",
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+	targetingFailure := enricher.EnrichRequest(request, "testId")
+	assert.Empty(t, targetingFailure)
+	assert.Equal(t, "existingKey=value,jwpseg=1,jwpseg=2,jwpseg=5,jwpseg=6", request.Site.Keywords)
+	datum := request.Site.Content.Data[0]
+	assert.Equal(t, "jwplayer.com", datum.Name)
+	assert.Len(t, datum.Segment, 4)
+	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}}
+	assert.ElementsMatch(t, datum.Segment, expectedSegments)
+
+	expectedExt := DataExt{Segtax: 502}
+	datumExt := DataExt{}
+	json.Unmarshal(datum.Ext, &datumExt)
+	assert.Equal(t, expectedExt, datumExt)
+}
+
+func TestSuccessAppendsToPreviousData(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		respWriter.WriteHeader(200)
+		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
+	}))
+	defer server.Close()
+	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Data: []openrtb2.Data{{
+					Name: "otherData",
+					ID:   "otherDataId",
+				}, {
+					Name: "3rdData",
+					ID:   "3rdDataId",
+				}},
+				Ext: json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+	targetingFailure := enricher.EnrichRequest(request, "testId")
+
+	assert.Empty(t, targetingFailure)
+	assert.Equal(t, "jwpseg=1,jwpseg=2,jwpseg=5,jwpseg=6", request.Site.Keywords)
+	assert.Len(t, request.Site.Content.Data, 3)
+	otherData := request.Site.Content.Data[0]
+	assert.Equal(t, otherData.Name, "otherData")
+	assert.Equal(t, otherData.ID, "otherDataId")
+	thirdData := request.Site.Content.Data[1]
+	assert.Equal(t, thirdData.Name, "3rdData")
+	assert.Equal(t, thirdData.ID, "3rdDataId")
+	datum := request.Site.Content.Data[2]
+	assert.Equal(t, "jwplayer.com", datum.Name)
+	assert.Len(t, datum.Segment, 4)
+	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}}
+	assert.ElementsMatch(t, datum.Segment, expectedSegments)
+
+	expectedExt := DataExt{Segtax: 502}
+	datumExt := DataExt{}
+	json.Unmarshal(datum.Ext, &datumExt)
+	assert.Equal(t, expectedExt, datumExt)
+}
+
+func TestMissingDistributionChannel(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		respWriter.WriteHeader(http.StatusOK)
+		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2", "3", "4"], "targeting_profiles": ["5", "6", "7", "8"]}}`))
+	}))
+	defer server.Close()
+
+	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+
+	assert.Empty(t, failure)
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+	}
+
+	enrichmentFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Equal(t, MissingDistributionChannelErrorCode, enrichmentFailure.Code())
+}
+
+func TestMissingContent(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
+		respWriter.WriteHeader(http.StatusOK)
+		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2", "3", "4"], "targeting_profiles": ["5", "6", "7", "8"]}}`))
+	}))
+	defer server.Close()
+
+	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+
+	assert.Empty(t, failure)
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		App: &openrtb2.App{},
+	}
+
+	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, request.App.Keywords)
+	assert.Empty(t, request.App.Content)
+	assert.Equal(t, MissingContentBlockErrorCode, targetingFailure.Code())
+}
+
+func TestDecodeError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(http.StatusOK)
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2", `))
@@ -51,18 +221,32 @@ func TestFetchContentTargetingDecodeError(t *testing.T) {
 
 	assert.Empty(t, failure)
 
-	metadata := jwContentMetadata{
-		Url:         "http://www.testUrl.com/media.mp4",
-		Title:       "testTitle",
-		Description: "testDesc",
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		App: &openrtb2.App{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
 	}
 
-	response, fetchError := enricher.FetchContentTargeting("testSiteId", metadata)
-	assert.Empty(t, response)
-	assert.Equal(t, BaseDecodingErrorCode, fetchError.Code())
+	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, request.App.Keywords)
+	assert.Empty(t, request.App.Content.Data)
+	assert.Equal(t, BaseDecodingErrorCode, targetingFailure.Code())
 }
 
-func TestFetchContentTargetingNetworkError(t *testing.T) {
+func TestNetworkError(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(433)
 	}))
@@ -72,18 +256,32 @@ func TestFetchContentTargetingNetworkError(t *testing.T) {
 
 	assert.Empty(t, failure)
 
-	metadata := jwContentMetadata{
-		Url:         "http://www.testUrl.com/media.mp4",
-		Title:       "testTitle",
-		Description: "testDesc",
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
 	}
 
-	response, fetchError := enricher.FetchContentTargeting("testSiteId", metadata)
-	assert.Empty(t, response)
-	assert.Equal(t, BaseNetworkErrorCode+433, fetchError.Code())
+	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, BaseNetworkErrorCode+433, targetingFailure.Code())
 }
 
-func TestFetchContentTargetingBadRequest(t *testing.T) {
+func TestMissingEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
 
@@ -91,148 +289,194 @@ func TestFetchContentTargetingBadRequest(t *testing.T) {
 
 	assert.Empty(t, failure)
 
-	metadata := jwContentMetadata{
-		Url:         "http://www.testUrl.com/media.mp4",
-		Title:       "testTitle",
-		Description: "testDesc",
-	}
-
-	response, fetchError := enricher.FetchContentTargeting("testSiteId", metadata)
-	assert.Empty(t, response)
-	assert.Equal(t, HttpRequestExecutionErrorCode, fetchError.Code())
-}
-
-func TestRequestHasSegments(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{
-		Data: []openrtb2.Data{
-			{
-				Name: "jwplayer.com",
-				Segment: []openrtb2.Segment{
-					{Value: "1"}, {Value: "2"}, {Value: "3"},
-				},
-				Ext: []byte(`{"segtax": 502}`),
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
 			},
 		},
 	}
 
+	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, TargetingUrlErrorCode, targetingFailure.Code())
+}
+
+func TestRequestAlreadyHasSegments(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
 	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
 
-	enricher.enrich(&keywords, &content, "testId")
-	assert.Equal(t, "jwpseg=1,jwpseg=2,jwpseg=3", keywords)
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Data: []openrtb2.Data{
+					{
+						Name: "jwplayer.com",
+						Segment: []openrtb2.Segment{
+							{Value: "1"}, {Value: "2"}, {Value: "3"},
+						},
+						Ext: []byte(`{"segtax": 502}`),
+					},
+				},
+				Ext: json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
 
-	keywords = "existingKey=value"
-	enricher.enrich(&keywords, &content, "testId")
-	assert.Equal(t, "existingKey=value,jwpseg=1,jwpseg=2,jwpseg=3", keywords)
+	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, targetingFailure)
+	assert.Equal(t, "jwpseg=1,jwpseg=2,jwpseg=3", request.Site.Keywords)
+
+	request.Site.Keywords = "existingKey=value"
+	targetingFailure = enricher.EnrichRequest(request, "testSiteId")
+	assert.Empty(t, targetingFailure)
+	assert.Equal(t, "existingKey=value,jwpseg=1,jwpseg=2,jwpseg=3", request.Site.Keywords)
 }
 
-func TestEnrichMissingSiteId(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{}
+func TestMissingSiteId(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
 	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "")
-	assert.Equal(t, MissingSiteIdErrorCode, failure.Code())
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+
+	targetingFailure := enricher.EnrichRequest(request, "")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, MissingSiteIdErrorCode, targetingFailure.Code())
 }
 
-func TestEnrichMissingContentUrl(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{}
+func TestMissingContentUrl(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
 	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "testId")
-	assert.Equal(t, MissingMediaUrlErrorCode, failure.Code())
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+
+	targetingFailure := enricher.EnrichRequest(request, "testId")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, MissingMediaUrlErrorCode, targetingFailure.Code())
 }
 
-func TestEnrichFetchError(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{URL: "http://test.com/media.mp4"}
+func Test404(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(404)
 	}))
 	defer server.Close()
 	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "testId")
-	assert.Equal(t, BaseNetworkErrorCode+404, failure.Code())
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+
+	targetingFailure := enricher.EnrichRequest(request, "testId")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, BaseNetworkErrorCode+404, targetingFailure.Code())
 }
 
-func TestEnrichErrorEmptySegments(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{URL: "http://test.com/media.mp4"}
+func TestEmptySegments(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(200)
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": [], "targeting_profiles": []}}`))
 	}))
 	defer server.Close()
 	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "testId")
-	assert.Equal(t, EmptyTargetingSegmentsErrorCode, failure.Code())
-}
 
-func TestEnrichSuccess(t *testing.T) {
-	keywords := "existingKey=value"
-	content := openrtb2.Content{URL: "http://test.com/media.mp4"}
-	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
-		respWriter.WriteHeader(200)
-		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
-	}))
-	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "testId")
-	assert.Empty(t, failure)
-	assert.Equal(t, "existingKey=value,jwpseg=1,jwpseg=2,jwpseg=5,jwpseg=6", keywords)
-	datum := content.Data[0]
-	assert.Equal(t, "jwplayer.com", datum.Name)
-	assert.Len(t, datum.Segment, 4)
-	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}}
-	assert.ElementsMatch(t, datum.Segment, expectedSegments)
-
-	expectedExt := jwDataExt{Segtax: 502}
-	datumExt := jwDataExt{}
-	json.Unmarshal(datum.Ext, &datumExt)
-	assert.Equal(t, expectedExt, datumExt)
-}
-
-func TestEnrichSuccessAppendsToPreviousData(t *testing.T) {
-	keywords := ""
-	content := openrtb2.Content{
-		URL: "http://test.com/media.mp4",
-		Data: []openrtb2.Data{{
-			Name: "otherData",
-			ID:   "otherDataId",
-		}, {
-			Name: "3rdData",
-			ID:   "3rdDataId",
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
 		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
 	}
-	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
-		respWriter.WriteHeader(200)
-		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
-	}))
-	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
-	failure := enricher.enrich(&keywords, &content, "testId")
-	assert.Empty(t, failure)
-	assert.Equal(t, "jwpseg=1,jwpseg=2,jwpseg=5,jwpseg=6", keywords)
-	assert.Len(t, content.Data, 3)
-	otherData := content.Data[0]
-	assert.Equal(t, otherData.Name, "otherData")
-	assert.Equal(t, otherData.ID, "otherDataId")
-	thirdData := content.Data[1]
-	assert.Equal(t, thirdData.Name, "3rdData")
-	assert.Equal(t, thirdData.ID, "3rdDataId")
-	datum := content.Data[2]
-	assert.Equal(t, "jwplayer.com", datum.Name)
-	assert.Len(t, datum.Segment, 4)
-	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}}
-	assert.ElementsMatch(t, datum.Segment, expectedSegments)
 
-	expectedExt := jwDataExt{Segtax: 502}
-	datumExt := jwDataExt{}
-	json.Unmarshal(datum.Ext, &datumExt)
-	assert.Equal(t, expectedExt, datumExt)
+	targetingFailure := enricher.EnrichRequest(request, "testId")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, EmptyTargetingSegmentsErrorCode, targetingFailure.Code())
 }
