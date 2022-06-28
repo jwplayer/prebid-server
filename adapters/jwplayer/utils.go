@@ -3,17 +3,72 @@ package jwplayer
 import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/prebid/prebid-server/macros"
 	"net/url"
+	"strconv"
 	"strings"
+	"text/template"
 )
 
-func ParseContentMetadata(content openrtb2.Content) jwContentMetadata {
-	metadata := jwContentMetadata{
+func parseExtraInfo(v string) ExtraInfo {
+	var extraInfo ExtraInfo
+	if err := json.Unmarshal([]byte(v), &extraInfo); err != nil {
+		extraInfo = ExtraInfo{}
+	}
+
+	if extraInfo.TargetingEndpoint == "" {
+		extraInfo.TargetingEndpoint = "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
+	}
+
+	return extraInfo
+}
+
+// copied from appnexus.go appnexusImpExtAppnexus
+type appnexusImpExtParams struct {
+	PlacementID int `json:"placement_id,omitempty"`
+}
+
+// copied from appnexus.go appnexusImpExt
+type appnexusImpExt struct {
+	Appnexus appnexusImpExtParams `json:"appnexus"`
+}
+
+func getAppnexusExt(placementId string) json.RawMessage {
+	id, conversionError := strconv.Atoi(placementId)
+	if conversionError != nil {
+		return nil
+	}
+
+	appnexusExt := &appnexusImpExt{
+		Appnexus: appnexusImpExtParams{
+			PlacementID: id,
+		},
+	}
+
+	jsonExt, jsonError := json.Marshal(appnexusExt)
+	if jsonError != nil {
+		return nil
+	}
+
+	return jsonExt
+}
+
+func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
+	var pubExt publisherExt
+	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
+		return nil
+	}
+
+	return &pubExt.JWPlayer
+}
+
+func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
+	metadata := ContentMetadata{
 		Url:   content.URL,
 		Title: content.Title,
 	}
 
-	contentExt := jwContentExt{}
+	contentExt := ContentExt{}
 	if error := json.Unmarshal(content.Ext, &contentExt); error == nil {
 		println("karim: DESCRIPTION: ", contentExt.Description)
 		metadata.Description = contentExt.Description
@@ -33,7 +88,7 @@ func GetExistingJwpsegs(data []openrtb2.Data) []string {
 }
 
 func HasJwpsegs(datum openrtb2.Data) bool {
-	dataExt := jwDataExt{}
+	dataExt := DataExt{}
 	if error := json.Unmarshal(datum.Ext, &dataExt); error != nil {
 		return false
 	}
@@ -52,6 +107,30 @@ func isValidMediaUrl(rawUrl string) bool {
 	return !isLocalFile && !isRelativePath && !isLocalHost
 }
 
+func buildTargetingEndpoint(endpointTemplate *template.Template, siteId string, contentMetadata ContentMetadata) string {
+	if endpointTemplate == nil {
+		return ""
+	}
+
+	mediaUrl := url.QueryEscape(contentMetadata.Url)
+	title := url.QueryEscape(contentMetadata.Title)
+	description := url.QueryEscape(contentMetadata.Description)
+
+	endpointParams := EndpointTemplateParams{
+		SiteId:      siteId,
+		MediaUrl:    mediaUrl,
+		Title:       title,
+		Description: description,
+	}
+
+	reqUrl, macroResolveErr := macros.ResolveMacros(endpointTemplate, endpointParams)
+	if macroResolveErr != nil {
+		return ""
+	}
+
+	return reqUrl
+}
+
 func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	jwpsegs := make([]string, len(segments))
 	for index, segment := range segments {
@@ -61,14 +140,14 @@ func ParseJwpsegs(segments []openrtb2.Segment) []string {
 	return jwpsegs
 }
 
-func GetAllJwpsegs(targeting jwTargetingData) []string {
+func GetAllJwpsegs(targeting TargetingData) []string {
 	return append(targeting.BaseSegments, targeting.TargetingProfiles...)
 }
 
 func MakeOrtbDatum(jwpsegs []string) (contentData openrtb2.Data) {
 	contentData.Name = jwplayerDomain
 	contentData.Segment = MakeOrtbSegments(jwpsegs)
-	dataExt := jwDataExt{
+	dataExt := DataExt{
 		Segtax: jwplayerSegtax,
 	}
 	contentData.Ext, _ = json.Marshal(dataExt)
