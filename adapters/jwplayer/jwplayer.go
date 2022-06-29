@@ -214,7 +214,6 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
-	//if request.Device == nil {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
 	request.Device = &openrtb2.Device{}
 }

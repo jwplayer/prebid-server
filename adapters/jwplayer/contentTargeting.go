@@ -50,13 +50,6 @@ type RequestEnricher struct {
 	EndpointTemplate *template.Template
 }
 
-type EndpointTemplateParams struct {
-	SiteId      string
-	MediaUrl    string
-	Title       string
-	Description string
-}
-
 func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*RequestEnricher, *TargetingFailed) {
 	template, parseError := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
 	var buildError TargetingFailed

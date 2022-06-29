@@ -109,6 +109,13 @@ func IsValidMediaUrl(rawUrl string) bool {
 	return !isLocalFile && !isLocalHost && !isRelativePath
 }
 
+type EndpointTemplateParams struct {
+	SiteId      string
+	MediaUrl    string
+	Title       string
+	Description string
+}
+
 func BuildTargetingEndpoint(endpointTemplate *template.Template, siteId string, contentMetadata ContentMetadata) string {
 	if endpointTemplate == nil {
 		return ""
