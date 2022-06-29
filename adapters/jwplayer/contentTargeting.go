@@ -98,7 +98,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 
 	jwpsegs := GetExistingJwpsegs(content.Data)
 	if jwpsegs != nil && len(jwpsegs) > 0 {
-		writeToKeywords(keywords, jwpsegs)
+		WriteToXandrKeywords(keywords, jwpsegs)
 		return nil
 	}
 
@@ -117,14 +117,14 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 	}
 
 	metadata := ParseContentMetadata(*content)
-	if isValidMediaUrl(metadata.Url) == false {
+	if IsValidMediaUrl(metadata.Url) == false {
 		return &TargetingFailed{
 			Message: "Invalid Media Url",
 			code:    MissingMediaUrlErrorCode,
 		}
 	}
 
-	targetingUrl := buildTargetingEndpoint(enricher.EndpointTemplate, siteId, metadata)
+	targetingUrl := BuildTargetingEndpoint(enricher.EndpointTemplate, siteId, metadata)
 	if targetingUrl == "" {
 		return &TargetingFailed{
 			Message: "Failed to build the targeting Url",
@@ -157,7 +157,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 		}
 	}
 
-	writeToKeywords(keywords, jwpsegs)
+	WriteToXandrKeywords(keywords, jwpsegs)
 
 	contentDatum := MakeOrtbDatum(jwpsegs)
 	content.Data = append(content.Data, contentDatum)
