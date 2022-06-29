@@ -42,7 +42,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 		},
 	}
 
-	extraInfo := parseExtraInfo(config.ExtraAdapterInfo)
+	extraInfo := ParseExtraInfo(config.ExtraAdapterInfo)
 	var enricher Enricher
 	enricher, enricherBuildError := buildRequestEnricher(httpClient, extraInfo.TargetingEndpoint)
 

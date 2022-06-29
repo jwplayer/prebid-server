@@ -10,7 +10,7 @@ import (
 	"text/template"
 )
 
-func parseExtraInfo(v string) ExtraInfo {
+func ParseExtraInfo(v string) ExtraInfo {
 	var extraInfo ExtraInfo
 	if err := json.Unmarshal([]byte(v), &extraInfo); err != nil {
 		extraInfo = ExtraInfo{}
@@ -70,7 +70,6 @@ func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
 
 	contentExt := ContentExt{}
 	if error := json.Unmarshal(content.Ext, &contentExt); error == nil {
-		println("karim: DESCRIPTION: ", contentExt.Description)
 		metadata.Description = contentExt.Description
 	}
 
