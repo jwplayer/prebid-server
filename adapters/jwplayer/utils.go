@@ -33,7 +33,7 @@ type appnexusImpExt struct {
 	Appnexus appnexusImpExtParams `json:"appnexus"`
 }
 
-func getAppnexusExt(placementId string) json.RawMessage {
+func GetAppnexusExt(placementId string) json.RawMessage {
 	id, conversionError := strconv.Atoi(placementId)
 	if conversionError != nil {
 		return nil
@@ -53,7 +53,7 @@ func getAppnexusExt(placementId string) json.RawMessage {
 	return jsonExt
 }
 
-func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
+func ParsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
 	var pubExt publisherExt
 	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
 		return nil
@@ -96,18 +96,21 @@ func HasJwpsegs(datum openrtb2.Data) bool {
 	return datum.Name == jwplayerDomain && dataExt.Segtax == jwplayerSegtax && len(datum.Segment) > 0
 }
 
-func isValidMediaUrl(rawUrl string) bool {
+func IsValidMediaUrl(rawUrl string) bool {
 	parsedUrl, error := url.ParseRequestURI(rawUrl)
 	if error != nil {
 		return false
 	}
+
 	isLocalFile := parsedUrl.Scheme == "file"
 	isLocalHost := parsedUrl.Opaque != ""
-	isRelativePath := parsedUrl.Host == ""
-	return !isLocalFile && !isRelativePath && !isLocalHost
+	path := parsedUrl.Path
+	isRelativePath := parsedUrl.Scheme == "" && len(path) > 2 && path[0:1] == "/" && path[1:2] != "/"
+
+	return !isLocalFile && !isLocalHost && !isRelativePath
 }
 
-func buildTargetingEndpoint(endpointTemplate *template.Template, siteId string, contentMetadata ContentMetadata) string {
+func BuildTargetingEndpoint(endpointTemplate *template.Template, siteId string, contentMetadata ContentMetadata) string {
 	if endpointTemplate == nil {
 		return ""
 	}
@@ -166,7 +169,7 @@ func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 	return segments
 }
 
-func writeToKeywords(keywords *string, jwpsegs []string) {
+func WriteToXandrKeywords(keywords *string, jwpsegs []string) {
 	if len(jwpsegs) == 0 {
 		return
 	}
@@ -175,10 +178,10 @@ func writeToKeywords(keywords *string, jwpsegs []string) {
 		*keywords += ","
 	}
 
-	*keywords += GetXandrKeywords(jwpsegs)
+	*keywords += ConvertToXandrKeywords(jwpsegs)
 }
 
-func GetXandrKeywords(jwpsegs []string) string {
+func ConvertToXandrKeywords(jwpsegs []string) string {
 	if len(jwpsegs) == 0 {
 		return ""
 	}
