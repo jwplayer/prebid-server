@@ -54,7 +54,6 @@ func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*R
 	template, parseError := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
 	var buildError *TargetingFailed = nil
 	if parseError != nil {
-		fmt.Println("parse error occurred")
 		buildError = &TargetingFailed{
 			Message: fmt.Sprintf("Unable to parse targeting url template: %v", parseError),
 			code:    EndpointTemplateErrorCode,
