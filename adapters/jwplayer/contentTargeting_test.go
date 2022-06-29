@@ -9,7 +9,8 @@ import (
 	"testing"
 )
 
-// EmptyTemplateErrorCode HttpRequestInstantiationErrorCode HttpRequestExecutionErrorCode
+// Missing Tests: EmptyTemplateErrorCode HttpRequestInstantiationErrorCode HttpRequestExecutionErrorCode
+
 func TestSuccessful(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
 		respWriter.WriteHeader(http.StatusOK)

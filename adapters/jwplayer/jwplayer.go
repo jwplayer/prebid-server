@@ -94,7 +94,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 		if publisher := site.Publisher; publisher != nil {
 			a.sanitizePublisher(publisher)
-			publisherParams = parsePublisherParams(*publisher)
+			publisherParams = ParsePublisherParams(*publisher)
 		}
 	}
 
@@ -106,7 +106,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 		if publisher := app.Publisher; publisher != nil {
 			a.sanitizePublisher(publisher)
-			publisherParams = parsePublisherParams(*publisher)
+			publisherParams = ParsePublisherParams(*publisher)
 		}
 	}
 
@@ -198,7 +198,7 @@ func (a *Adapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlay
 func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
-	imp.Ext = getAppnexusExt(placementId)
+	imp.Ext = GetAppnexusExt(placementId)
 	if imp.Video == nil {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
