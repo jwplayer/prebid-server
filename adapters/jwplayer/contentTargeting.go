@@ -52,9 +52,10 @@ type RequestEnricher struct {
 
 func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*RequestEnricher, *TargetingFailed) {
 	template, parseError := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
-	var buildError TargetingFailed
+	var buildError *TargetingFailed = nil
 	if parseError != nil {
-		buildError = TargetingFailed{
+		fmt.Println("parse error occurred")
+		buildError = &TargetingFailed{
 			Message: fmt.Sprintf("Unable to parse targeting url template: %v", parseError),
 			code:    EndpointTemplateErrorCode,
 		}
@@ -63,7 +64,7 @@ func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*R
 	return &RequestEnricher{
 		httpClient:       httpClient,
 		EndpointTemplate: template,
-	}, &buildError
+	}, buildError
 }
 
 func (enricher *RequestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
