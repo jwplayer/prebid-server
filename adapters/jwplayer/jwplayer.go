@@ -122,7 +122,6 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
-	fmt.Println("Ready to make req ", string(requestJSON))
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors

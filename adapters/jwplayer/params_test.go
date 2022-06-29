@@ -2,7 +2,6 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"testing"
 )
@@ -15,7 +14,6 @@ import (
 func TestValidParams(t *testing.T) {
 	validator := getValidator(t)
 	for _, validParam := range validParams {
-		fmt.Println(validParam)
 		if err := validator.Validate(openrtb_ext.BidderJWPlayer, json.RawMessage(validParam)); err != nil {
 			t.Errorf("Schema rejected jwplayer params: %s", validParam)
 		}
