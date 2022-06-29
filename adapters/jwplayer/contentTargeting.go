@@ -90,7 +90,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 	}
 
 	jwpsegs := GetExistingJwpsegs(content.Data)
-	if jwpsegs != nil && len(jwpsegs) > 0 {
+	if len(jwpsegs) > 0 {
 		WriteToXandrKeywords(keywords, jwpsegs)
 		return nil
 	}
