@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGetExtraInfo(t *testing.T) {
+func TestParseExtraInfo(t *testing.T) {
 	extraInfo := parseExtraInfo("{\"targeting_endpoint\": \"targetingUrl\"}")
 	assert.Equal(t, "targetingUrl", extraInfo.TargetingEndpoint)
 
@@ -19,6 +19,8 @@ func TestGetExtraInfo(t *testing.T) {
 	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 }
 
+//GetAppnexusExt
+//ParsePublisherParams
 func TestContentMetadataParseSuccess(t *testing.T) {
 	description := "Test Description"
 	descriptionExt, _ := json.Marshal(ContentExt{
@@ -89,19 +91,21 @@ func TestHasJwpsegs(t *testing.T) {
 }
 
 func TestIsValidMediaUrl(t *testing.T) {
-	assert.False(t, isValidMediaUrl(""))
-	assert.False(t, isValidMediaUrl("nothing"))
-	assert.False(t, isValidMediaUrl("media.mp4"))
-	assert.False(t, isValidMediaUrl("file://hello.com/media.mp4"))
-	assert.False(t, isValidMediaUrl("localhost:9999/hello.com/media.mp4"))
-	assert.False(t, isValidMediaUrl("0.0.0.0:9999/hello.com/media.mp4"))
-	assert.False(t, isValidMediaUrl("/hello.com/media.mp4"))
+	assert.False(t, IsValidMediaUrl(""))
+	assert.False(t, IsValidMediaUrl("nothing"))
+	assert.False(t, IsValidMediaUrl("media.mp4"))
+	assert.False(t, IsValidMediaUrl("file://hello.com/media.mp4"))
+	assert.False(t, IsValidMediaUrl("localhost:9999/hello.com/media.mp4"))
+	assert.False(t, IsValidMediaUrl("0.0.0.0:9999/hello.com/media.mp4"))
+	assert.False(t, IsValidMediaUrl("/hello.com/media.mp4"))
 
-	assert.True(t, isValidMediaUrl("//hello.com/media.mp4"))
-	assert.True(t, isValidMediaUrl("http://hello.com/media.mp4"))
-	assert.True(t, isValidMediaUrl("https://hello.com/media.mp4"))
-	assert.True(t, isValidMediaUrl("https://hello.com/media.mp4?additional=sthg"))
+	assert.True(t, IsValidMediaUrl("//hello.com/media.mp4"))
+	assert.True(t, IsValidMediaUrl("http://hello.com/media.mp4"))
+	assert.True(t, IsValidMediaUrl("https://hello.com/media.mp4"))
+	assert.True(t, IsValidMediaUrl("https://hello.com/media.mp4?additional=sthg"))
 }
+
+//BuildTargetingEndpoint
 
 func TestParseJwpsegs(t *testing.T) {
 	var emptySegments []openrtb2.Segment
@@ -154,25 +158,25 @@ func TestMakeOrtbSegments(t *testing.T) {
 	assert.ElementsMatch(t, segments, expectedSegments)
 }
 
-func TestGetXandrKeywords(t *testing.T) {
+func TestConvertToXandrKeywords(t *testing.T) {
 	var emptyJwpsegs []string
-	assert.Equal(t, "", GetXandrKeywords(emptyJwpsegs))
+	assert.Equal(t, "", ConvertToXandrKeywords(emptyJwpsegs))
 
 	singleJwpseg := []string{"80808080"}
-	assert.Equal(t, "jwpseg=80808080", GetXandrKeywords(singleJwpseg))
+	assert.Equal(t, "jwpseg=80808080", ConvertToXandrKeywords(singleJwpseg))
 
 	multipleJwpsegs := []string{"88888888", "80808080", "80088008"}
-	assert.Equal(t, "jwpseg=88888888,jwpseg=80808080,jwpseg=80088008", GetXandrKeywords(multipleJwpsegs))
+	assert.Equal(t, "jwpseg=88888888,jwpseg=80808080,jwpseg=80088008", ConvertToXandrKeywords(multipleJwpsegs))
 }
 
-func TestWriteToKeywords(t *testing.T) {
+func TestWriteToXandrKeywords(t *testing.T) {
 	keyword := "key=value"
 	var jwpsegs []string
-	writeToKeywords(&keyword, jwpsegs)
+	WriteToXandrKeywords(&keyword, jwpsegs)
 	assert.Equal(t, "key=value", keyword)
 
 	jwpsegs = append(jwpsegs, "80808080")
-	writeToKeywords(&keyword, jwpsegs)
+	WriteToXandrKeywords(&keyword, jwpsegs)
 	assert.Equal(t, "key=value,jwpseg=80808080", keyword)
 
 }
