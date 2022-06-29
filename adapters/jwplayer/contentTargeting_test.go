@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// Missing Tests: EmptyTemplateErrorCode HttpRequestInstantiationErrorCode HttpRequestExecutionErrorCode
+// Missing Tests: HttpRequestInstantiationErrorCode HttpRequestExecutionErrorCode
 
 func TestSuccessful(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {
@@ -386,6 +386,33 @@ func TestMissingSiteId(t *testing.T) {
 	assert.Empty(t, request.Site.Keywords)
 	assert.Empty(t, request.Site.Content.Data)
 	assert.Equal(t, MissingSiteIdErrorCode, targetingFailure.Code())
+}
+
+func TestMissingTemplate(t *testing.T) {
+	enricher := RequestEnricher{}
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Content: &openrtb2.Content{
+				URL:   "http://www.testUrl.com/media.mp4",
+				Title: "testTitle",
+				Ext:   json.RawMessage(`{"description"": "testDesc"`),
+			},
+		},
+	}
+
+	targetingFailure := enricher.EnrichRequest(request, "")
+	assert.Empty(t, request.Site.Keywords)
+	assert.Empty(t, request.Site.Content.Data)
+	assert.Equal(t, EmptyTemplateErrorCode, targetingFailure.Code())
 }
 
 func TestMissingContentUrl(t *testing.T) {
