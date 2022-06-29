@@ -5,22 +5,43 @@ import (
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"text/template"
 )
 
 func TestParseExtraInfo(t *testing.T) {
-	extraInfo := parseExtraInfo("{\"targeting_endpoint\": \"targetingUrl\"}")
+	extraInfo := ParseExtraInfo("{\"targeting_endpoint\": \"targetingUrl\"}")
 	assert.Equal(t, "targetingUrl", extraInfo.TargetingEndpoint)
 
 	defaultTargetingUrl := "https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}"
-	extraInfo = parseExtraInfo("{/")
+	extraInfo = ParseExtraInfo("{/")
 	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 
-	extraInfo = parseExtraInfo("{}")
+	extraInfo = ParseExtraInfo("{}")
 	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 }
 
-//GetAppnexusExt
-//ParsePublisherParams
+func TestGetAppnexusExt(t *testing.T) {
+	appnexusExt := GetAppnexusExt("1234")
+	var appnexusImp appnexusImpExt
+	json.Unmarshal(appnexusExt, &appnexusImp)
+	assert.Equal(t, 1234, appnexusImp.Appnexus.PlacementID)
+
+	var badAppnexusImp appnexusImpExt
+	badAppnexusExt := GetAppnexusExt("-/")
+	json.Unmarshal(badAppnexusExt, &badAppnexusImp)
+	assert.Empty(t, badAppnexusImp)
+}
+
+func TestParsePublisherParams(t *testing.T) {
+	publisher := openrtb2.Publisher{
+		Ext: json.RawMessage(`{"otherBidder":{"placementId": "test_placement_id"}, "jwplayer":{"siteId": "testSideId", "publisherId": "testPublisherId"}}`),
+	}
+
+	jwpub := ParsePublisherParams(publisher)
+	assert.Equal(t, "testSideId", jwpub.SiteId)
+	assert.Equal(t, "testPublisherId", jwpub.PublisherId)
+}
+
 func TestContentMetadataParseSuccess(t *testing.T) {
 	description := "Test Description"
 	descriptionExt, _ := json.Marshal(ContentExt{
@@ -105,7 +126,43 @@ func TestIsValidMediaUrl(t *testing.T) {
 	assert.True(t, IsValidMediaUrl("https://hello.com/media.mp4?additional=sthg"))
 }
 
-//BuildTargetingEndpoint
+func TestBuildTargetingEndpoint(t *testing.T) {
+	badEndpoint := BuildTargetingEndpoint(nil, "", ContentMetadata{})
+	assert.Empty(t, badEndpoint)
+
+	correctTemplate, _ := template.New("targetingEndpointTemplate").Parse("domain.com/{{.SiteId}}/{{.MediaUrl}}/{{.Title}}/{{.Description}}")
+	metadata1 := ContentMetadata{
+		Url:         "testUrl",
+		Title:       "testTitle",
+		Description: "testDescription",
+	}
+	correctEndpoint := BuildTargetingEndpoint(correctTemplate, "testSideId", metadata1)
+	assert.Equal(t, "domain.com/testSideId/testUrl/testTitle/testDescription", correctEndpoint)
+
+	missingTitleTemplate, _ := template.New("targetingEndpointTemplate").Parse("domain.com/{{.SiteId}}/{{.MediaUrl}}/{{.Description}}")
+	metadata2 := ContentMetadata{
+		Url:   "testUrl",
+		Title: "testTitle",
+	}
+	missingTitleEndpoint := BuildTargetingEndpoint(missingTitleTemplate, "testSideId", metadata2)
+	assert.Equal(t, "domain.com/testSideId/testUrl/", missingTitleEndpoint)
+
+	missingSiteIdTemplate, _ := template.New("targetingEndpointTemplate").Parse("domain.com/{{.MediaUrl}}/{{.Title}}/{{.Description}}")
+	metadata3 := ContentMetadata{
+		Title:       "testTitle",
+		Description: "testDescription",
+	}
+	missingSiteIdEndpoint := BuildTargetingEndpoint(missingSiteIdTemplate, "testSideId", metadata3)
+	assert.Equal(t, "domain.com//testTitle/testDescription", missingSiteIdEndpoint)
+
+	extraParamTemplate, _ := template.New("targetingEndpointTemplate").Parse("domain.com/{{.SiteId}}/{{.Sthg}}/{{.MediaUrl}}/{{.Title}}/{{.Description}}")
+	metadata4 := ContentMetadata{
+		Url:         "testUrl",
+		Description: "testDescription",
+	}
+	extraParamEndpoint := BuildTargetingEndpoint(extraParamTemplate, "testSideId", metadata4)
+	assert.Empty(t, extraParamEndpoint)
+}
 
 func TestParseJwpsegs(t *testing.T) {
 	var emptySegments []openrtb2.Segment

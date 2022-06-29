@@ -1005,7 +1005,7 @@ func SetupViper(v *viper.Viper, filename string) {
 	v.SetDefault("adapters.janet.endpoint", "http://ghb.bidder.jmgads.com/pbs/ortb")
 	v.SetDefault("adapters.jixie.endpoint", "https://hb.jixie.io/v2/hbsvrpost")
 	v.SetDefault("adapters.jwplayer.endpoint", "https://ib.adnxs.com/openrtb2/prebid")
-	v.SetDefault("adapters.jwplayer.extra_info", "{\"targeting_endpoint\": \"https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url=%{{.MediaUrl}}&title={{.Title}}&description={{.Description}}\"}")	
+	v.SetDefault("adapters.jwplayer.extra_info", "{\"targeting_endpoint\": \"https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url={{.MediaUrl}}&title={{.Title}}&description={{.Description}}\"}")
 	v.SetDefault("adapters.kargo.endpoint", "https://krk.kargo.com/api/v1/openrtb")
 	v.SetDefault("adapters.kayzen.endpoint", "https://bids-{{.ZoneID}}.bidder.kayzen.io/?exchange={{.AccountID}}")
 	v.SetDefault("adapters.kidoz.endpoint", "http://prebid-adapter.kidoz.net/openrtb2/auction?src=prebid-server")
