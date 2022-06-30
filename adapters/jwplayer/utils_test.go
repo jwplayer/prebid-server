@@ -119,6 +119,7 @@ func TestIsValidMediaUrl(t *testing.T) {
 	assert.False(t, IsValidMediaUrl("localhost:9999/hello.com/media.mp4"))
 	assert.False(t, IsValidMediaUrl("0.0.0.0:9999/hello.com/media.mp4"))
 	assert.False(t, IsValidMediaUrl("/hello.com/media.mp4"))
+	assert.False(t, IsValidMediaUrl("www.example.com/video.mp4"))
 
 	assert.True(t, IsValidMediaUrl("//hello.com/media.mp4"))
 	assert.True(t, IsValidMediaUrl("http://hello.com/media.mp4"))
