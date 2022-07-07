@@ -120,16 +120,15 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 		publisherId = publisherParams.PublisherId
 	}
 
-	// get ortb 2.4 schain if available
-	// get ortb 2.5 schain if available: $.Source.ext.schain
-	// convert to ortb 2.4
-	// append to ortb 2.4 schain if defined
-	// generate 2.4 schain node for us
-	// append to 2.4 schain: $.ext.schain
+	if publisherId == "" {
+		err := &errortypes.BadInput{
+			Message: "The bid request did not contain a publisher Id.\n Set your Publisher Id to $.{site|app}.publisher.ext.jwplayer.publisherId.",
+		}
+		errors = append(errors, err)
+		return nil, errors
+	}
 
-	// return bad input if publisherId is missing
-
-	// test: no schain , 2.4 schain, 2.5 schain
+	a.sanitizeRequestExt(&requestCopy, publisherId)
 
 	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, siteId)
 	if enrichmentFailure != nil {
@@ -235,8 +234,8 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 }
 
 func (a *Adapter) sanitizeRequestExt(request *openrtb2.BidRequest, publisherId string) {
-	schain := MakeSChain(request, publisherId)
-	request.Ext = GetXandrRequestExt(schain)
+	sChain := MakeSChain(request, publisherId)
+	request.Ext = GetXandrRequestExt(sChain)
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
