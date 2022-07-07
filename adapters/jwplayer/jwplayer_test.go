@@ -2,8 +2,10 @@ package jwplayer
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"github.com/stretchr/testify/assert"
 	"net/http"
@@ -44,7 +46,11 @@ func TestSingleRequest(t *testing.T) {
 				W: 350,
 			},
 		}},
-		Site: &openrtb2.Site{},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
 	}
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)
@@ -107,6 +113,7 @@ func TestIdsAreRemoved(t *testing.T) {
 			Publisher: &openrtb2.Publisher{
 				ID:   "test_publisher_id",
 				Name: "testPublisher_name",
+				Ext:  json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
 		App: &openrtb2.App{
@@ -144,6 +151,11 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
 	}
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)
@@ -156,8 +168,26 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
 }
 
-func TestMissingPublisherId(t *testing.T) {
-	
+func TestBadInputMissingPublisherId(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"siteId": "testSiteId"}}`),
+			},
+		},
+	}
+
+	_, err := a.MakeRequests(request, &reqInfo)
+	assert.Len(t, err, 1)
+	assert.Equal(t, fmt.Sprintf("%T", &errortypes.BadInput{}), fmt.Sprintf("%T", err[0]))
 }
 
 func TestSChain(t *testing.T) {
@@ -197,6 +227,71 @@ func TestSChain(t *testing.T) {
 	assert.Equal(t, "testPublisherId", node.SID)
 	assert.Equal(t, "test_id", node.RID)
 	assert.Equal(t, 1, node.HP)
+}
+
+func TestAppendingToExistingSchain(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	sourceExt := &openrtb_ext.SourceExt{
+		SChain: openrtb_ext.ExtRequestPrebidSChainSChain{
+			Complete: 0,
+			Ver:      "2.0",
+			Nodes: []*openrtb_ext.ExtRequestPrebidSChainSChainNode{{
+				ASI: "publisher.com",
+				SID: "some id",
+				RID: "some req id",
+				HP:  0,
+			}},
+		},
+	}
+
+	sourceExtJSON, _ := json.Marshal(sourceExt)
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+		Source: &openrtb2.Source{
+			Ext: sourceExtJSON,
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	assert.NotNil(t, processedRequestJSON.Ext)
+
+	var requestExtJSON requestExt
+	parseErr := json.Unmarshal(processedRequestJSON.Ext, &requestExtJSON)
+	assert.Nil(t, parseErr)
+	assert.NotNil(t, requestExtJSON.SChain)
+	sChain := requestExtJSON.SChain
+	assert.Equal(t, 0, sChain.Complete)
+	assert.Equal(t, "1.0", sChain.Ver)
+	assert.Len(t, sChain.Nodes, 2)
+
+	publisherNode := sChain.Nodes[0]
+	assert.Equal(t, "publisher.com", publisherNode.ASI)
+	assert.Equal(t, "some id", publisherNode.SID)
+	assert.Equal(t, "some req id", publisherNode.RID)
+	assert.Equal(t, 0, publisherNode.HP)
+
+	jwplayerNode := sChain.Nodes[1]
+	assert.Equal(t, jwplayerDomain, jwplayerNode.ASI)
+	assert.Equal(t, "testPublisherId", jwplayerNode.SID)
+	assert.Equal(t, "test_id", jwplayerNode.RID)
+	assert.Equal(t, 1, jwplayerNode.HP)
 }
 
 func TestEnrichmentCall(t *testing.T) {
@@ -239,7 +334,9 @@ func TestEnrichmentCall(t *testing.T) {
 			},
 		}},
 		App: &openrtb2.App{
-			Publisher: &openrtb2.Publisher{},
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
 		},
 	}
 
@@ -294,6 +391,11 @@ func TestOpenRTBStandardResponse(t *testing.T) {
 				"placementId": "2763",
 			}}`),
 		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
 	}
 
 	requestJson, _ := json.Marshal(request)
