@@ -261,20 +261,20 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPublisher, *errortypes.BadInput) {
 	if pubExt == nil {
 		return nil, &errortypes.BadInput{
-			Message: "The bid request did not contain a publisher.ext.\n $.{site|app}.publisher.ext.jwplayer.publisherId is mandatory.",
+			Message: "The bid request is missing publisher.ext.\n $.{site|app}.publisher.ext.jwplayer.publisherId is required.",
 		}
 	}
 
 	var jwplayerPublisherExt publisherExt
 	if err := json.Unmarshal(pubExt, &jwplayerPublisherExt); err != nil {
 		return nil, &errortypes.BadInput{
-			Message: "The bid request did not contain a valid publisher.ext.jwplayer field: " + err.Error(),
+			Message: "Invalid publisher.ext.jwplayer in request: " + err.Error(),
 		}
 	}
 
 	if &jwplayerPublisherExt.JWPlayer == nil {
 		return nil, &errortypes.BadInput{
-			Message: "The bid request did is missing publisher.ext.jwplayer\n $.{site|app}.publisher.ext.jwplayer.publisherId is mandatory.",
+			Message: "The bid request is missing publisher.ext.jwplayer\n $.{site|app}.publisher.ext.jwplayer.publisherId is required.",
 		}
 	}
 
