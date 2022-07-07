@@ -32,16 +32,6 @@ func TestGetAppnexusExt(t *testing.T) {
 	assert.Empty(t, badAppnexusImp)
 }
 
-func TestParsePublisherParams(t *testing.T) {
-	publisher := openrtb2.Publisher{
-		Ext: json.RawMessage(`{"otherBidder":{"placementId": "test_placement_id"}, "jwplayer":{"siteId": "testSideId", "publisherId": "testPublisherId"}}`),
-	}
-
-	jwpub := ParsePublisherParams(publisher)
-	assert.Equal(t, "testSideId", jwpub.SiteId)
-	assert.Equal(t, "testPublisherId", jwpub.PublisherId)
-}
-
 func TestContentMetadataParseSuccess(t *testing.T) {
 	description := "Test Description"
 	descriptionExt, _ := json.Marshal(ContentExt{

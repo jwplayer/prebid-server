@@ -195,7 +195,88 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
 }
 
-func TestBadInputMissingPublisherId(t *testing.T) {
+func TestBadInputMissingDistributionChannel(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+	}
+
+	_, err := a.MakeRequests(request, &reqInfo)
+	assert.Len(t, err, 1)
+	assert.Equal(t, fmt.Sprintf("%T", &errortypes.BadInput{}), fmt.Sprintf("%T", err[0]))
+}
+
+func TestBadInputMissingPublisher(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			ID: "some_id",
+		},
+	}
+
+	_, err := a.MakeRequests(request, &reqInfo)
+	assert.Len(t, err, 1)
+	assert.Equal(t, fmt.Sprintf("%T", &errortypes.BadInput{}), fmt.Sprintf("%T", err[0]))
+}
+
+func TestBadInputMissingPublisherExt(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				ID: "some_pub_id",
+			},
+		},
+	}
+
+	_, err := a.MakeRequests(request, &reqInfo)
+	assert.Len(t, err, 1)
+	assert.Equal(t, fmt.Sprintf("%T", &errortypes.BadInput{}), fmt.Sprintf("%T", err[0]))
+}
+
+func TestBadInputMissingJwplayerPublisherExt(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"bidder":{"siteId": "testSiteId"}}`),
+			},
+		},
+	}
+
+	_, err := a.MakeRequests(request, &reqInfo)
+	assert.Len(t, err, 1)
+	assert.Equal(t, fmt.Sprintf("%T", &errortypes.BadInput{}), fmt.Sprintf("%T", err[0]))
+}
+
+func TestBadInputMissingJwplayerPublisherId(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
