@@ -84,34 +84,19 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	requestCopy.Imp = validImps
 
-	publisherParams := &jwplayerPublisher{
-		SiteId:      "",
-		PublisherId: "",
+	if distributionChannelError := a.sanitizeDistributionChannels(requestCopy.Site, requestCopy.App); distributionChannelError != nil {
+		errors = append(errors, distributionChannelError)
+		return nil, errors
 	}
 
-	if site := requestCopy.Site; site != nil {
-		// per Xandr doc, if set, this should equal the Xandr placement code.
-		// It is best to remove, since placement code is set to imp.TagID
-		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-SiteObjectSiteObject
-		site.ID = ""
-
-		if publisher := site.Publisher; publisher != nil {
-			a.sanitizePublisher(publisher)
-			publisherParams = ParsePublisherParams(*publisher)
-		}
+	publisher, missingPublisherError := a.getPublisher(requestCopy.Site, requestCopy.App)
+	if missingPublisherError != nil {
+		errors = append(errors, missingPublisherError)
+		return nil, errors
 	}
 
-	if app := requestCopy.App; app != nil {
-		// per Xandr doc, if set, used to look up an Xandr tinytag ID by tinytag code.
-		// It is best to remove, since Xandr expects an ID specific to its platform
-		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
-		app.ID = ""
-
-		if publisher := app.Publisher; publisher != nil {
-			a.sanitizePublisher(publisher)
-			publisherParams = ParsePublisherParams(*publisher)
-		}
-	}
+	a.sanitizePublisher(publisher)
+	publisherParams := ParsePublisherParams(*publisher)
 
 	siteId := ""
 	publisherId := ""
@@ -217,6 +202,53 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
 	}
+}
+
+func (a *Adapter) sanitizeDistributionChannels(site *openrtb2.Site, app *openrtb2.App) *errortypes.BadInput {
+	if site == nil && app == nil {
+		return &errortypes.BadInput{
+			Message: "The bid request did not contain a Site or App field. Please populate $.{site|app}.",
+		}
+	}
+
+	if site != nil && app != nil {
+		return &errortypes.BadInput{
+			Message: "Per oRTB 2.5, The bid request cannot contain both a Site and App field. Please populate either $.site or $.app.",
+		}
+	}
+
+	if site != nil {
+		// per Xandr doc, if set, this should equal the Xandr placement code.
+		// It is best to remove, since placement code is set to imp.TagID
+		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-SiteObjectSiteObject
+		site.ID = ""
+
+	}
+
+	if app != nil {
+		// per Xandr doc, if set, used to look up an Xandr tinytag ID by tinytag code.
+		// It is best to remove, since Xandr expects an ID specific to its platform
+		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
+		app.ID = ""
+	}
+
+	return nil
+}
+
+func (a *Adapter) getPublisher(site *openrtb2.Site, app *openrtb2.App) (publisher *openrtb2.Publisher, err *errortypes.BadInput) {
+	if site != nil {
+		publisher = site.Publisher
+	} else if app != nil {
+		publisher = app.Publisher
+	}
+
+	if publisher == nil {
+		err = &errortypes.BadInput{
+			Message: "The bid request did not contain a Publisher field. Please populate $.{site|app}.publisher .",
+		}
+	}
+
+	return publisher, err
 }
 
 func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
