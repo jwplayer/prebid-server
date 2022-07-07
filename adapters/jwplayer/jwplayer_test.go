@@ -156,6 +156,49 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
 }
 
+func TestMissingPublisherId(t *testing.T) {
+	
+}
+
+func TestSChain(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	assert.NotNil(t, processedRequestJSON.Ext)
+	var requestExtJSON requestExt
+	parseErr := json.Unmarshal(processedRequestJSON.Ext, &requestExtJSON)
+	assert.Nil(t, parseErr)
+	assert.NotNil(t, requestExtJSON.SChain)
+	sChain := requestExtJSON.SChain
+	assert.Equal(t, 1, sChain.Complete)
+	assert.Equal(t, "1.0", sChain.Ver)
+	assert.Len(t, sChain.Nodes, 1)
+	node := sChain.Nodes[0]
+	assert.Equal(t, jwplayerDomain, node.ASI)
+	assert.Equal(t, "testPublisherId", node.SID)
+	assert.Equal(t, "test_id", node.RID)
+	assert.Equal(t, 1, node.HP)
+}
+
 func TestEnrichmentCall(t *testing.T) {
 	enrichmentSpy := &MockEnricher{}
 	var mockEnricher Enricher = enrichmentSpy
