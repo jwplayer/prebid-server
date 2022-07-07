@@ -54,15 +54,6 @@ func GetAppnexusExt(placementId string) json.RawMessage {
 	return jsonExt
 }
 
-func ParsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
-	var pubExt publisherExt
-	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
-		return nil
-	}
-
-	return &pubExt.JWPlayer
-}
-
 func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
 	metadata := ContentMetadata{
 		Url:   content.URL,
