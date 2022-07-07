@@ -21,8 +21,13 @@ type ExtraInfo struct {
 	TargetingEndpoint string `json:"targeting_endpoint,omitempty"`
 }
 
-type requestExt struct {
-	SChain openrtb_ext.ExtRequestPrebidSChainSChain `json:"schain"`
+type jwplayerPublisher struct {
+	PublisherId string `json:"publisherId,omitempty"`
+	SiteId      string `json:"siteId,omitempty"`
+}
+
+type publisherExt struct {
+	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
 }
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
@@ -230,74 +235,15 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 }
 
 func (a *Adapter) sanitizeRequestExt(request *openrtb2.BidRequest, publisherId string) {
-	schain := a.makeSChain(request, publisherId)
-	request.Ext = a.getXandrRequestExt(schain)
-}
-
-func (a *Adapter) makeSChain(request *openrtb2.BidRequest, publisherId string) openrtb_ext.ExtRequestPrebidSChainSChain {
-	node := a.makeSChainNode(publisherId, request.ID)
-	pub25SChain := a.getPublisherSChain25(*request.Source)
-	isComplete := 1
-	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
-	if pub25SChain != nil {
-		isComplete = pub25SChain.Complete
-		nodes = pub25SChain.Nodes
-	}
-
-	nodes = append(nodes, &node)
-
-	return openrtb_ext.ExtRequestPrebidSChainSChain{
-		Ver:      "1.0",
-		Complete: isComplete,
-		Nodes:    nodes,
-	}
-}
-
-/*
-Get the SChain from the 2.5 oRTB spec
-*/
-func (a *Adapter) getPublisherSChain25(source openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
-	var sourceExt openrtb_ext.SourceExt
-	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
-		return nil
-	}
-
-	return &sourceExt.SChain
-}
-
-func (a *Adapter) makeSChainNode(publisherId string, requestId string) openrtb_ext.ExtRequestPrebidSChainSChainNode {
-	return openrtb_ext.ExtRequestPrebidSChainSChainNode{
-		ASI: jwplayerDomain,
-		SID: publisherId,
-		RID: requestId,
-		HP:  1,
-	}
-}
-
-func (a *Adapter) getXandrRequestExt(schain openrtb_ext.ExtRequestPrebidSChainSChain) []byte {
-	// Xandr expects the SChain to be in accordance with oRTB 2.4
-	// $.ext.schain
-	requestExtension := requestExt{
-		SChain: schain,
-	}
-	jsonExt, jsonError := json.Marshal(requestExtension)
-	if jsonError != nil {
-		return nil
-	}
-	return jsonExt
+	schain := MakeSChain(request, publisherId)
+	request.Ext = GetXandrRequestExt(schain)
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
-	request.Device = &openrtb2.Device{}
-}
-
-type jwplayerPublisher struct {
-	PublisherId string `json:"publisherId,omitempty"`
-	SiteId      string `json:"siteId,omitempty"`
-}
-type publisherExt struct {
-	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
+	if request.Device == nil {
+		request.Device = &openrtb2.Device{}
+	}
 }
 
 func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
