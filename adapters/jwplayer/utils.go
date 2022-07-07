@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/macros"
+	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/url"
 	"strconv"
 	"strings"
@@ -191,4 +192,59 @@ func Map[T any, M any](inputs []T, f func(T) M) []M {
 		outputs[i] = f(element)
 	}
 	return outputs
+}
+
+type requestExt struct {
+	SChain openrtb_ext.ExtRequestPrebidSChainSChain `json:"schain"`
+}
+
+func MakeSChain(request *openrtb2.BidRequest, publisherId string) openrtb_ext.ExtRequestPrebidSChainSChain {
+	node := MakeSChainNode(publisherId, request.ID)
+	pub25SChain := GetPublisherSChain25(*request.Source)
+	isComplete := 1
+	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
+	if pub25SChain != nil {
+		isComplete = pub25SChain.Complete
+		nodes = pub25SChain.Nodes
+	}
+
+	nodes = append(nodes, &node)
+
+	return openrtb_ext.ExtRequestPrebidSChainSChain{
+		Ver:      "1.0",
+		Complete: isComplete,
+		Nodes:    nodes,
+	}
+}
+
+// GetPublisherSChain25 Get the SChain from the 2.5 oRTB spec
+func GetPublisherSChain25(source openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
+	var sourceExt openrtb_ext.SourceExt
+	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
+		return nil
+	}
+
+	return &sourceExt.SChain
+}
+
+func MakeSChainNode(publisherId string, requestId string) openrtb_ext.ExtRequestPrebidSChainSChainNode {
+	return openrtb_ext.ExtRequestPrebidSChainSChainNode{
+		ASI: jwplayerDomain,
+		SID: publisherId,
+		RID: requestId,
+		HP:  1,
+	}
+}
+
+func GetXandrRequestExt(schain openrtb_ext.ExtRequestPrebidSChainSChain) json.RawMessage {
+	// Xandr expects the SChain to be in accordance with oRTB 2.4
+	// $.ext.schain
+	requestExtension := requestExt{
+		SChain: schain,
+	}
+	jsonExt, jsonError := json.Marshal(requestExtension)
+	if jsonError != nil {
+		return nil
+	}
+	return jsonExt
 }
