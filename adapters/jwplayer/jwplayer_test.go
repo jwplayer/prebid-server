@@ -116,10 +116,6 @@ func TestIdsAreRemoved(t *testing.T) {
 				Ext:  json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		App: &openrtb2.App{
-			ID:     "test_app_id",
-			Domain: "test_app_domain",
-		},
 	}
 
 	processedRequest, err := a.MakeRequests(request, &reqInfo)
@@ -137,8 +133,39 @@ func TestIdsAreRemoved(t *testing.T) {
 	assert.Empty(t, resultJSON.Site.ID, "Site.id should be removed")
 	assert.NotEmpty(t, resultJSON.Site.Publisher, "Publisher object should not be removed")
 	assert.Empty(t, resultJSON.Site.Publisher.ID, "Publisher.id should be removed")
+
+	request = &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+		}},
+		App: &openrtb2.App{
+			ID:     "test_app_id",
+			Domain: "test_app_domain",
+			Publisher: &openrtb2.Publisher{
+				ID:   "test_publisher_id",
+				Name: "testPublisher_name",
+				Ext:  json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+	}
+
+	processedRequest, err = a.MakeRequests(request, &reqInfo)
+
+	assert.Empty(t, err, "Errors array should be empty")
+	assert.Len(t, processedRequest, 1, "Only one request should be returned")
+
+	result = processedRequest[0]
+	resultJSON = &openrtb2.BidRequest{}
+	json.Unmarshal(result.Body, resultJSON)
+
+	assert.Len(t, resultJSON.Imp, 1, "Imp count should be equal or less than Imps from input. In this test, should be 1.")
+	assert.Empty(t, resultJSON.Imp[0].Ext, "Ext should be deleted")
 	assert.NotEmpty(t, resultJSON.App, "App object should not be removed")
 	assert.Empty(t, resultJSON.App.ID, "App.id should be removed")
+	assert.NotEmpty(t, resultJSON.App.Publisher, "Publisher object should not be removed")
+	assert.Empty(t, resultJSON.App.Publisher.ID, "Publisher.id should be removed")
 }
 
 func TestMandatoryRequestParamsAreAdded(t *testing.T) {

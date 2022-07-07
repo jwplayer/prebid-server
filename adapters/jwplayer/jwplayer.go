@@ -96,18 +96,17 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	}
 
 	a.sanitizePublisher(publisher)
-	publisherParams := ParsePublisherParams(*publisher)
-
-	siteId := ""
-	publisherId := ""
-	if publisherParams != nil {
-		siteId = publisherParams.SiteId
-		publisherId = publisherParams.PublisherId
+	publisherParams, missingJwplayerPubExt := a.getJwplayerPublisherExt(publisher.Ext)
+	if missingJwplayerPubExt != nil {
+		errors = append(errors, missingJwplayerPubExt)
+		return nil, errors
 	}
+
+	publisherId := publisherParams.PublisherId
 
 	if publisherId == "" {
 		err := &errortypes.BadInput{
-			Message: "The bid request did not contain a publisher Id.\n Set your Publisher Id to $.{site|app}.publisher.ext.jwplayer.publisherId.",
+			Message: "The bid request did not contain a JWPlayer publisher Id.\n Set your Publisher Id to $.{site|app}.publisher.ext.jwplayer.publisherId.",
 		}
 		errors = append(errors, err)
 		return nil, errors
@@ -115,7 +114,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	a.sanitizeRequestExt(&requestCopy, publisherId)
 
-	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, siteId)
+	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
@@ -257,6 +256,29 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 	// It is best to remove, since placement code is set to imp.TagID
 	// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
 	publisher.ID = ""
+}
+
+func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPublisher, *errortypes.BadInput) {
+	if pubExt == nil {
+		return nil, &errortypes.BadInput{
+			Message: "The bid request did not contain a publisher.ext.\n $.{site|app}.publisher.ext.jwplayer.publisherId is mandatory.",
+		}
+	}
+
+	var jwplayerPublisherExt publisherExt
+	if err := json.Unmarshal(pubExt, &jwplayerPublisherExt); err != nil {
+		return nil, &errortypes.BadInput{
+			Message: "The bid request did not contain a valid publisher.ext.jwplayer field: " + err.Error(),
+		}
+	}
+
+	if &jwplayerPublisherExt.JWPlayer == nil {
+		return nil, &errortypes.BadInput{
+			Message: "The bid request did is missing publisher.ext.jwplayer\n $.{site|app}.publisher.ext.jwplayer.publisherId is mandatory.",
+		}
+	}
+
+	return &jwplayerPublisherExt.JWPlayer, nil
 }
 
 func (a *Adapter) sanitizeRequestExt(request *openrtb2.BidRequest, publisherId string) {
