@@ -200,7 +200,7 @@ type requestExt struct {
 
 func MakeSChain(request *openrtb2.BidRequest, publisherId string) openrtb_ext.ExtRequestPrebidSChainSChain {
 	node := MakeSChainNode(publisherId, request.ID)
-	pub25SChain := GetPublisherSChain25(*request.Source)
+	pub25SChain := GetPublisherSChain25(request.Source)
 	isComplete := 1
 	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
 	if pub25SChain != nil {
@@ -218,7 +218,11 @@ func MakeSChain(request *openrtb2.BidRequest, publisherId string) openrtb_ext.Ex
 }
 
 // GetPublisherSChain25 Get the SChain from the 2.5 oRTB spec
-func GetPublisherSChain25(source openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
+func GetPublisherSChain25(source *openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
+	if source == nil {
+		return nil
+	}
+
 	var sourceExt openrtb_ext.SourceExt
 	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
 		return nil
