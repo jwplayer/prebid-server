@@ -76,6 +76,71 @@ func GetAppnexusExt(placementId string) json.RawMessage {
 	return jsonExt
 }
 
+type xandrVideoExt struct {
+	Appnexus xandrVideoExtParams `json:"appnexus"`
+}
+
+type xandrVideoExtParams struct {
+	Context xandrContext `json:"context,omitempty"`
+}
+
+type xandrContext int
+
+const (
+	Unknown   xandrContext = 0
+	PreRoll   xandrContext = 1
+	MidRoll   xandrContext = 2
+	PostRoll  xandrContext = 3
+	Outstream xandrContext = 4
+)
+
+func SetXandrVideoExt(video *openrtb2.Video) {
+	context := GetXandrContext(*video)
+	if context == Unknown {
+		return
+	}
+	
+	videoExt := xandrVideoExt{
+		Appnexus: xandrVideoExtParams{
+			Context: context,
+		},
+	}
+	video.Ext, _ = json.Marshal(videoExt)
+}
+
+func GetXandrContext(video openrtb2.Video) xandrContext {
+	if IsOutstream(video.Placement) == true {
+		return Outstream
+	}
+
+	if video.StartDelay == nil {
+		return Unknown
+	}
+
+	return GetXandrContextFromStartdelay(*video.StartDelay)
+}
+
+func GetXandrContextFromStartdelay(startDelay openrtb2.StartDelay) xandrContext {
+	if startDelay > 0 {
+		return MidRoll // startdelay > 0 indicates ad position in seconds
+	}
+
+	switch startDelay {
+	case openrtb2.StartDelayPreRoll:
+		return PreRoll
+	case openrtb2.StartDelayGenericMidRoll:
+		return MidRoll
+	case openrtb2.StartDelayGenericPostRoll:
+		return PostRoll
+	}
+
+	return Unknown
+}
+
+func IsOutstream(placement openrtb2.VideoPlacementType) bool {
+	return placement > 1
+}
+
 func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
 	metadata := ContentMetadata{
 		Url:   content.URL,
