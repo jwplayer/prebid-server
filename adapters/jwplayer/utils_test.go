@@ -36,6 +36,7 @@ func TestParseBidderParams(t *testing.T) {
 	params, err = ParseBidderParams(openrtb2.Imp{
 		Ext: json.RawMessage(`{"bidder":{"otherId": "1"}}`),
 	})
+	assert.NotNil(t, err)
 	assert.Empty(t, params)
 }
 

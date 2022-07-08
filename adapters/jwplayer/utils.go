@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/macros"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/url"
@@ -31,12 +32,18 @@ func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 		return nil, err
 	}
 
-	var params openrtb_ext.ImpExtJWPlayer
+	var params *openrtb_ext.ImpExtJWPlayer
 	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
 		return nil, err
 	}
 
-	return &params, nil
+	if params.PlacementId == "" {
+		return nil, &errortypes.BadInput{
+			Message: "Empty ext.prebid.bidder.jwplayer.placementId",
+		}
+	}
+
+	return params, nil
 }
 
 // copied from appnexus.go appnexusImpExtAppnexus
