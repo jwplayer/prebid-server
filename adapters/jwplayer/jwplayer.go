@@ -111,12 +111,13 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 		return nil, errors
 	}
 
-	a.sanitizeRequestExt(&requestCopy, publisherId)
+	a.setSChain(&requestCopy, publisherId)
 
 	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
+
 	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
@@ -282,9 +283,18 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 	return &jwplayerPublisherExt.JWPlayer, nil
 }
 
-func (a *Adapter) sanitizeRequestExt(request *openrtb2.BidRequest, publisherId string) {
-	sChain := MakeSChain(request, publisherId)
+func (a *Adapter) setSChain(request *openrtb2.BidRequest, publisherId string) {
+	publisherSChain := GetPublisherSChain25(request.Source)
+	a.clearPublisherSChain(request.Source)
+	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
 	request.Ext = GetXandrRequestExt(sChain)
+}
+
+func (a *Adapter) clearPublisherSChain(source *openrtb2.Source) {
+	if source == nil {
+		return
+	}
+	source.Ext = nil
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
