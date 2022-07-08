@@ -63,13 +63,12 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
-	for _, imp := range requestCopy.Imp {
-		params, parserError := a.parseBidderParams(imp)
-		if parserError != nil {
-			errors = append(errors, parserError)
+	for idx, imp := range requestCopy.Imp {
+		err := a.sanitizeImp(&imp)
+		if err != nil {
+			err.Message = fmt.Sprintf("Imp #%d, ID %s, is invalid: %s", idx, imp.ID, err.Message)
+			errors = append(errors, err)
 		} else {
-			placementId := params.PlacementId
-			a.sanitizeImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -185,21 +184,21 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	return bidderResponse, nil
 }
 
-func (a *Adapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
-	var impExt adapters.ExtImpBidder
-	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
-		return nil, err
+func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
+	params, parseError := ParseBidderParams(*imp)
+	if parseError != nil {
+		return &errortypes.BadInput{
+			Message: "Invalid Ext: " + parseError.Error(),
+		}
 	}
 
-	var params openrtb_ext.ImpExtJWPlayer
-	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
-		return nil, err
+	placementId := params.PlacementId
+	if placementId == "" {
+		return &errortypes.BadInput{
+			Message: "Empty ext.prebid.bidder.jwplayer.placementId",
+		}
 	}
 
-	return &params, nil
-}
-
-func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = GetAppnexusExt(placementId)
@@ -207,6 +206,8 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
 	}
+
+	return nil
 }
 
 func (a *Adapter) sanitizeDistributionChannels(site *openrtb2.Site, app *openrtb2.App) *errortypes.BadInput {
