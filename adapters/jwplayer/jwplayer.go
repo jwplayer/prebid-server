@@ -188,12 +188,6 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
 	}
 
 	placementId := params.PlacementId
-	if placementId == "" {
-		return &errortypes.BadInput{
-			Message: "Empty ext.prebid.bidder.jwplayer.placementId",
-		}
-	}
-
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = GetAppnexusExt(placementId)
