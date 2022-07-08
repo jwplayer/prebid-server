@@ -142,11 +142,11 @@ func TestInvalidImpAreFiltered(t *testing.T) {
 	assert.NotNil(t, processedRequestJSON.Imp[0].Ext, "Ext should be deleted")
 	assert.NotNil(t, processedRequestJSON.Imp[1].Ext, "Ext should be deleted")
 
-	ext1 := &appnexusImpExt{}
+	ext1 := &xandrImpExt{}
 	json.Unmarshal(processedRequestJSON.Imp[0].Ext, ext1)
 	assert.Equal(t, 1, ext1.Appnexus.PlacementID)
 
-	ext2 := &appnexusImpExt{}
+	ext2 := &xandrImpExt{}
 	json.Unmarshal(processedRequestJSON.Imp[1].Ext, ext2)
 	assert.Equal(t, 2, ext2.Appnexus.PlacementID)
 }

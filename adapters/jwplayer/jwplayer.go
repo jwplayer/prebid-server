@@ -181,7 +181,7 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
 	placementId := params.PlacementId
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
-	imp.Ext = GetAppnexusExt(placementId)
+	imp.Ext = GetXandrImpExt(placementId)
 	if imp.Video == nil {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
