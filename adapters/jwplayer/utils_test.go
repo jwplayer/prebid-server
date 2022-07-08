@@ -40,14 +40,14 @@ func TestParseBidderParams(t *testing.T) {
 	assert.Empty(t, params)
 }
 
-func TestGetAppnexusExt(t *testing.T) {
-	appnexusExt := GetAppnexusExt("1234")
-	var appnexusImp appnexusImpExt
+func TestGetXandrImpExt(t *testing.T) {
+	appnexusExt := GetXandrImpExt("1234")
+	var appnexusImp xandrImpExt
 	json.Unmarshal(appnexusExt, &appnexusImp)
 	assert.Equal(t, 1234, appnexusImp.Appnexus.PlacementID)
 
-	var badAppnexusImp appnexusImpExt
-	badAppnexusExt := GetAppnexusExt("-/")
+	var badAppnexusImp xandrImpExt
+	badAppnexusExt := GetXandrImpExt("-/")
 	json.Unmarshal(badAppnexusExt, &badAppnexusImp)
 	assert.Empty(t, badAppnexusImp)
 }
