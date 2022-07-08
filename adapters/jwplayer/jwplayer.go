@@ -95,23 +95,14 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	}
 
 	a.sanitizePublisher(publisher)
-	publisherParams, missingJwplayerPubExt := a.getJwplayerPublisherExt(publisher.Ext)
-	if missingJwplayerPubExt != nil {
-		errors = append(errors, missingJwplayerPubExt)
+
+	publisherParams, invalidJwplayerPubExt := a.getJwplayerPublisherExt(publisher.Ext)
+	if invalidJwplayerPubExt != nil {
+		errors = append(errors, invalidJwplayerPubExt)
 		return nil, errors
 	}
 
-	publisherId := publisherParams.PublisherId
-
-	if publisherId == "" {
-		err := &errortypes.BadInput{
-			Message: "The bid request did not contain a JWPlayer publisher Id.\n Set your Publisher Id to $.{site|app}.publisher.ext.jwplayer.publisherId.",
-		}
-		errors = append(errors, err)
-		return nil, errors
-	}
-
-	a.setSChain(&requestCopy, publisherId)
+	a.setXandrSChain(&requestCopy, publisherParams.PublisherId)
 
 	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
@@ -261,9 +252,12 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 }
 
 func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPublisher, *errortypes.BadInput) {
+	warningMessage := "The bid request is missing "
+	guidanceMessage := "\n$.{site|app}.publisher.ext.jwplayer.publisherId is required."
+
 	if pubExt == nil {
 		return nil, &errortypes.BadInput{
-			Message: "The bid request is missing publisher.ext.\n $.{site|app}.publisher.ext.jwplayer.publisherId is required.",
+			Message: warningMessage + "publisher.ext" + guidanceMessage,
 		}
 	}
 
@@ -274,23 +268,25 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 		}
 	}
 
-	if &jwplayerPublisherExt.JWPlayer == nil {
+	if jwplayerPublisherExt.JWPlayer.PublisherId == "" {
 		return nil, &errortypes.BadInput{
-			Message: "The bid request is missing publisher.ext.jwplayer\n $.{site|app}.publisher.ext.jwplayer.publisherId is required.",
+			Message: warningMessage + "publisher.ext.jwplayer.publisherId" + guidanceMessage,
 		}
 	}
 
 	return &jwplayerPublisherExt.JWPlayer, nil
 }
 
-func (a *Adapter) setSChain(request *openrtb2.BidRequest, publisherId string) {
+func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId string) {
 	publisherSChain := GetPublisherSChain25(request.Source)
-	a.clearPublisherSChain(request.Source)
+	// We support request in the oRTB 2.5 format, whereas Xandr supports 2.4
+	// We discard the publisher's 2.5 schain to avoid the risk of confusion down the line for Xandr
+	a.clearPublisherSChain25(request.Source)
 	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
 	request.Ext = GetXandrRequestExt(sChain)
 }
 
-func (a *Adapter) clearPublisherSChain(source *openrtb2.Source) {
+func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
 	if source == nil {
 		return
 	}
