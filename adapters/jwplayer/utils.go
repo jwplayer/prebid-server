@@ -204,14 +204,13 @@ type requestExt struct {
 	SChain openrtb_ext.ExtRequestPrebidSChainSChain `json:"schain"`
 }
 
-func MakeSChain(request *openrtb2.BidRequest, publisherId string) openrtb_ext.ExtRequestPrebidSChainSChain {
-	node := MakeSChainNode(publisherId, request.ID)
-	pub25SChain := GetPublisherSChain25(request.Source)
+func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb_ext.ExtRequestPrebidSChainSChain) openrtb_ext.ExtRequestPrebidSChainSChain {
+	node := MakeSChainNode(publisherId, requestId)
 	isComplete := 1
 	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
-	if pub25SChain != nil {
-		isComplete = pub25SChain.Complete
-		nodes = pub25SChain.Nodes
+	if publisherSChain != nil {
+		isComplete = publisherSChain.Complete
+		nodes = publisherSChain.Nodes
 	}
 
 	nodes = append(nodes, &node)
