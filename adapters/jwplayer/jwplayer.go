@@ -187,6 +187,8 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
 		imp.Video = &openrtb2.Video{}
 	}
 
+	SetXandrVideoExt(imp.Video)
+
 	return nil
 }
 
