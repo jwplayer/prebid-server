@@ -47,23 +47,23 @@ func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 }
 
 // copied from appnexus.go appnexusImpExtAppnexus
-type appnexusImpExtParams struct {
+type xandrImpExtParams struct {
 	PlacementID int `json:"placement_id,omitempty"`
 }
 
 // copied from appnexus.go appnexusImpExt
-type appnexusImpExt struct {
-	Appnexus appnexusImpExtParams `json:"appnexus"`
+type xandrImpExt struct {
+	Appnexus xandrImpExtParams `json:"appnexus"`
 }
 
-func GetAppnexusExt(placementId string) json.RawMessage {
+func GetXandrImpExt(placementId string) json.RawMessage {
 	id, conversionError := strconv.Atoi(placementId)
 	if conversionError != nil {
 		return nil
 	}
 
-	appnexusExt := &appnexusImpExt{
-		Appnexus: appnexusImpExtParams{
+	appnexusExt := &xandrImpExt{
+		Appnexus: xandrImpExtParams{
 			PlacementID: id,
 		},
 	}
@@ -99,7 +99,7 @@ func SetXandrVideoExt(video *openrtb2.Video) {
 	if context == Unknown {
 		return
 	}
-	
+
 	videoExt := xandrVideoExt{
 		Appnexus: xandrVideoExtParams{
 			Context: context,
