@@ -506,6 +506,36 @@ func TestEnrichmentCall(t *testing.T) {
 	assert.Empty(t, enrichmentSpy.SiteId)
 }
 
+func TestSourceSanitization(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+		Source: &openrtb2.Source{
+			Ext: json.RawMessage(`{}`),
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	assert.NotNil(t, processedRequestJSON.Source)
+	assert.Empty(t, processedRequestJSON.Source.Ext)
+}
+
 func TestOpenRTBEmptyResponse(t *testing.T) {
 	httpResp := &adapters.ResponseData{
 		StatusCode: http.StatusNoContent,
