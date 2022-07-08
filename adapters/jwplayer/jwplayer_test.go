@@ -40,7 +40,7 @@ func TestSingleRequest(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
@@ -97,6 +97,60 @@ func TestInvalidImpExt(t *testing.T) {
 	assert.Empty(t, result, "Result should be nil")
 }
 
+func TestInvalidImpAreFiltered(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id_1",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id_valid",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+		}, {
+			ID:  "test_imp_id_bad_format",
+			Ext: json.RawMessage(`{]`),
+		}, {
+			ID:  "test_imp_id_valid_2",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "2"}}`),
+		}, {
+			ID:  "test_imp_id_bad_missing_placementId",
+			Ext: json.RawMessage(`{"bidder":{"other": "otherId"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+
+	assert.Len(t, err, 2, "2 errors should be returned")
+	assert.NotNil(t, processedRequests, "Result should be nil")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+
+	assert.Len(t, processedRequestJSON.Imp, 2, "Imp count should be equal or less than Imps from input. In this test, should be 2.")
+	assert.Equal(t, "1", processedRequestJSON.Imp[0].TagID, "placement id should be set to TagID")
+	assert.Equal(t, "2", processedRequestJSON.Imp[1].TagID, "placement id should be set to TagID")
+	assert.NotNil(t, processedRequestJSON.Imp[0].Video, "Video should be populated")
+	assert.NotNil(t, processedRequestJSON.Imp[1].Video, "Video should be populated")
+
+	assert.NotNil(t, processedRequestJSON.Imp[0].Ext, "Ext should be deleted")
+	assert.NotNil(t, processedRequestJSON.Imp[1].Ext, "Ext should be deleted")
+
+	ext1 := &appnexusImpExt{}
+	json.Unmarshal(processedRequestJSON.Imp[0].Ext, ext1)
+	assert.Equal(t, 1, ext1.Appnexus.PlacementID)
+
+	ext2 := &appnexusImpExt{}
+	json.Unmarshal(processedRequestJSON.Imp[1].Ext, ext2)
+	assert.Equal(t, 2, ext2.Appnexus.PlacementID)
+}
+
 func TestIdsAreRemoved(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
@@ -105,7 +159,7 @@ func TestIdsAreRemoved(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			ID:     "test_site_id",
@@ -128,7 +182,7 @@ func TestIdsAreRemoved(t *testing.T) {
 	json.Unmarshal(result.Body, resultJSON)
 
 	assert.Len(t, resultJSON.Imp, 1, "Imp count should be equal or less than Imps from input. In this test, should be 1.")
-	assert.Empty(t, resultJSON.Imp[0].Ext, "Ext should be deleted")
+	assert.NotNil(t, resultJSON.Imp[0].Ext, "Ext should be set")
 	assert.NotEmpty(t, resultJSON.Site, "Site object should not be removed")
 	assert.Empty(t, resultJSON.Site.ID, "Site.id should be removed")
 	assert.NotEmpty(t, resultJSON.Site.Publisher, "Publisher object should not be removed")
@@ -138,7 +192,7 @@ func TestIdsAreRemoved(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		App: &openrtb2.App{
 			ID:     "test_app_id",
@@ -161,7 +215,7 @@ func TestIdsAreRemoved(t *testing.T) {
 	json.Unmarshal(result.Body, resultJSON)
 
 	assert.Len(t, resultJSON.Imp, 1, "Imp count should be equal or less than Imps from input. In this test, should be 1.")
-	assert.Empty(t, resultJSON.Imp[0].Ext, "Ext should be deleted")
+	assert.NotNil(t, resultJSON.Imp[0].Ext, "Ext should be set")
 	assert.NotEmpty(t, resultJSON.App, "App object should not be removed")
 	assert.Empty(t, resultJSON.App.ID, "App.id should be removed")
 	assert.NotEmpty(t, resultJSON.App.Publisher, "Publisher object should not be removed")
@@ -176,7 +230,7 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -203,7 +257,7 @@ func TestBadInputMissingDistributionChannel(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 	}
 
@@ -220,7 +274,7 @@ func TestBadInputMissingPublisher(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			ID: "some_id",
@@ -240,7 +294,7 @@ func TestBadInputMissingPublisherExt(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -262,7 +316,7 @@ func TestBadInputMissingJwplayerPublisherExt(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -284,7 +338,7 @@ func TestBadInputMissingJwplayerPublisherId(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -306,7 +360,7 @@ func TestSChain(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -360,7 +414,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "2"}}`),
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
@@ -415,7 +469,7 @@ func TestEnrichmentCall(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "2"}}`),
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
@@ -435,7 +489,7 @@ func TestEnrichmentCall(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
-			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
+			Ext: json.RawMessage(`{"bidder":{"placementId": "3"}}`),
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
