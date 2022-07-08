@@ -20,6 +20,25 @@ func TestParseExtraInfo(t *testing.T) {
 	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 }
 
+func TestParseBidderParams(t *testing.T) {
+	params, err := ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+	})
+	assert.Empty(t, err)
+	assert.Equal(t, "1", params.PlacementId)
+
+	params, err = ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"else":{"placementId": "1"}}`),
+	})
+	assert.NotNil(t, err)
+	assert.Empty(t, params)
+
+	params, err = ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"bidder":{"otherId": "1"}}`),
+	})
+	assert.Empty(t, params.PlacementId)
+}
+
 func TestGetAppnexusExt(t *testing.T) {
 	appnexusExt := GetAppnexusExt("1234")
 	var appnexusImp appnexusImpExt
