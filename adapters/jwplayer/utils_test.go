@@ -52,6 +52,55 @@ func TestGetXandrImpExt(t *testing.T) {
 	assert.Empty(t, badAppnexusImp)
 }
 
+func TestSetXandrVideoExt(t *testing.T) {
+	video := &openrtb2.Video{}
+	SetXandrVideoExt(video)
+	assert.Empty(t, video.Ext)
+
+	video.Placement = openrtb2.VideoPlacementTypeInArticle
+	SetXandrVideoExt(video)
+	assert.NotNil(t, video.Ext)
+	var ext xandrVideoExt
+	json.Unmarshal(video.Ext, &ext)
+	assert.Equal(t, Outstream, ext.Appnexus.Context)
+
+	video.Ext = nil
+	video.Placement = openrtb2.VideoPlacementTypeInStream
+	video.StartDelay = openrtb2.StartDelayGenericPostRoll.Ptr()
+	SetXandrVideoExt(video)
+	assert.NotNil(t, video.Ext)
+	json.Unmarshal(video.Ext, &ext)
+	assert.Equal(t, PostRoll, ext.Appnexus.Context)
+}
+
+func TestGetXandrContext(t *testing.T) {
+	video := openrtb2.Video{}
+	assert.Equal(t, Unknown, GetXandrContext(video))
+
+	video.Placement = openrtb2.VideoPlacementTypeInBanner
+	video.StartDelay = openrtb2.StartDelayPreRoll.Ptr()
+	assert.Equal(t, Outstream, GetXandrContext(video))
+
+	video.Placement = openrtb2.VideoPlacementTypeInStream
+	assert.Equal(t, PreRoll, GetXandrContext(video))
+}
+
+func TestGetXandrContextFromStartdelay(t *testing.T) {
+	assert.Equal(t, PreRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayPreRoll))
+	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayGenericMidRoll))
+	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(openrtb2.StartDelay(5)))
+	assert.Equal(t, PostRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayGenericPostRoll))
+}
+
+func TestIsOutstream(t *testing.T) {
+	assert.False(t, IsOutstream(openrtb2.VideoPlacementTypeInStream))
+
+	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInBanner))
+	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInArticle))
+	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInFeed))
+	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInterstitialSliderFloating))
+}
+
 func TestContentMetadataParseSuccess(t *testing.T) {
 	description := "Test Description"
 	descriptionExt, _ := json.Marshal(ContentExt{

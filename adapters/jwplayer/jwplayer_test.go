@@ -151,6 +151,39 @@ func TestInvalidImpAreFiltered(t *testing.T) {
 	assert.Equal(t, 2, ext2.Appnexus.PlacementID)
 }
 
+func TestImpVideoExt(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	startDelay := openrtb2.StartDelay(50)
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+			Video: &openrtb2.Video{
+				H:          250,
+				W:          350,
+				StartDelay: &startDelay,
+			},
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+
+	assert.Empty(t, err, "Errors array should be empty")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
+
+	processedRequest := processedRequests[0]
+	processedRequestJSON := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+}
+
 func TestIdsAreRemoved(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
