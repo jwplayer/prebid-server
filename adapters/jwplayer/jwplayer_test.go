@@ -155,16 +155,14 @@ func TestImpVideoExt(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	startDelay := openrtb2.StartDelay(50)
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 			Video: &openrtb2.Video{
-				H:          250,
-				W:          350,
-				StartDelay: &startDelay,
+				H: 250,
+				W: 350,
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -182,6 +180,38 @@ func TestImpVideoExt(t *testing.T) {
 	processedRequest := processedRequests[0]
 	processedRequestJSON := &openrtb2.BidRequest{}
 	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	video := processedRequestJSON.Imp[0].Video
+	assert.Empty(t, video.Ext)
+
+	request.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInFeed
+	processedRequests, err = a.MakeRequests(request, &reqInfo)
+
+	assert.Empty(t, err, "Errors array should be empty")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
+
+	processedRequest = processedRequests[0]
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	video = processedRequestJSON.Imp[0].Video
+	assert.NotNil(t, video.Ext)
+
+	var ext xandrVideoExt
+	json.Unmarshal(video.Ext, &ext)
+	assert.Equal(t, Outstream, ext.Appnexus.Context)
+
+	request.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInStream
+	request.Imp[0].Video.StartDelay = openrtb2.StartDelay(10).Ptr()
+	processedRequests, err = a.MakeRequests(request, &reqInfo)
+
+	assert.Empty(t, err, "Errors array should be empty")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
+
+	processedRequest = processedRequests[0]
+	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	video = processedRequestJSON.Imp[0].Video
+	assert.NotNil(t, video.Ext)
+
+	json.Unmarshal(video.Ext, &ext)
+	assert.Equal(t, MidRoll, ext.Appnexus.Context)
 }
 
 func TestIdsAreRemoved(t *testing.T) {
