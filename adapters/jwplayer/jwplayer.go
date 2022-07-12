@@ -76,7 +76,7 @@ func (a *adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 		for i, _ := range seatBid.Bid {
 			bid := &seatBid.Bid[i]
 			if matchingImpId := getImpId(i, *request); matchingImpId != "" {
-				bid.ID = matchingImpId
+				bid.ImpID = matchingImpId
 			}
 
 			b := &adapters.TypedBid{
