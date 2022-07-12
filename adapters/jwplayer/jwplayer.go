@@ -68,16 +68,32 @@ func (a *adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 		return nil, []error{err}
 	}
 
+	response.ID = request.ID
+
 	bidResponse := adapters.NewBidderResponseWithBidsCapacity(len(request.Imp))
 	bidResponse.Currency = response.Cur
 	for _, seatBid := range response.SeatBid {
 		for i, _ := range seatBid.Bid {
+			bid := &seatBid.Bid[i]
+			if matchingImpId := getImpId(i, *request); matchingImpId != "" {
+				bid.ID = matchingImpId
+			}
+
 			b := &adapters.TypedBid{
-				Bid:     &seatBid.Bid[i],
+				Bid:     bid,
 				BidType: openrtb_ext.BidTypeVideo,
 			}
 			bidResponse.Bids = append(bidResponse.Bids, b)
 		}
 	}
 	return bidResponse, nil
+}
+
+func getImpId(impIdx int, request openrtb2.BidRequest) string {
+	impressions := request.Imp
+	if impIdx >= len(impressions) {
+		return ""
+	}
+
+	return impressions[impIdx].ID
 }
