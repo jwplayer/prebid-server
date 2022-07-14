@@ -133,6 +133,17 @@ func TestOpenRTBEmptyResponse(t *testing.T) {
 	assert.Empty(t, errs, "Expected 0 errors. Got %d", len(errs))
 }
 
+func TestOpenRTBBadResponse(t *testing.T) {
+	httpResp := &adapters.ResponseData{
+		StatusCode: http.StatusBadRequest,
+	}
+	bidder := new(JWPlayerAdapter)
+	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
+
+	assert.Nil(t, bidResponse, "Expected empty response")
+	assert.Len(t, errs, 1, "Expected 1 error. Got %d", len(errs))
+}
+
 func TestOpenRTBSurpriseResponse(t *testing.T) {
 	httpResp := &adapters.ResponseData{
 		StatusCode: http.StatusAccepted,
