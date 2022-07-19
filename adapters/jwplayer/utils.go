@@ -103,10 +103,15 @@ func IsValidMediaUrl(rawUrl string) bool {
 
 	isLocalFile := parsedUrl.Scheme == "file"
 	isLocalHost := parsedUrl.Opaque != ""
+
+	if isLocalFile || isLocalHost {
+		return false
+	}
+
 	path := parsedUrl.Path
 	isRelativePath := parsedUrl.Scheme == "" && len(path) > 2 && path[0:1] == "/" && path[1:2] != "/"
 
-	return !isLocalFile && !isLocalHost && !isRelativePath
+	return !isRelativePath
 }
 
 type EndpointTemplateParams struct {
