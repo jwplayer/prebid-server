@@ -24,7 +24,7 @@ type MockEnricher struct {
 	SiteId  string
 }
 
-func (enricher *MockEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+func (enricher *MockEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
 	enricher.Request = request
 	enricher.SiteId = siteId
 	return nil
@@ -66,10 +66,11 @@ func TestSingleRequest(t *testing.T) {
 				W: 350,
 			},
 		}},
-		Site: &openrtb2.Site{},
+		Site:   &openrtb2.Site{},
+		Device: &openrtb2.Device{},
 	}
 
-	assert.Equal(t, expectedJSON, resultJSON)
+	assert.Equal(t, expectedJSON, processedRequestJSON)
 }
 
 func TestInvalidImpExt(t *testing.T) {
@@ -218,7 +219,7 @@ func TestOpenRTBBadResponse(t *testing.T) {
 	httpResp := &adapters.ResponseData{
 		StatusCode: http.StatusBadRequest,
 	}
-	bidder := new(JWPlayerAdapter)
+	bidder := new(Adapter)
 	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
 
 	assert.Nil(t, bidResponse, "Expected empty response")

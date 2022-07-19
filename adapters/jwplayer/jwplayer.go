@@ -44,7 +44,7 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 
 	extraInfo := ParseExtraInfo(config.ExtraAdapterInfo)
 	var enricher Enricher
-	enricher, enricherBuildError := buildRequestEnricher(httpClient, extraInfo.TargetingEndpoint)
+	enricher, enricherBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
 
 	if enricherBuildError != nil {
 		fmt.Printf("Warning: a failure occured when building the Enricher: %s\n", enricherBuildError)
