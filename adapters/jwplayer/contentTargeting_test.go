@@ -18,7 +18,7 @@ func TestSuccessful(t *testing.T) {
 	}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+	enricher, failure := buildContentTargeting(server.Client(), server.URL)
 
 	assert.Empty(t, failure)
 
@@ -62,7 +62,7 @@ func TestSuccessfulAppendsToKeywords(t *testing.T) {
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
 	}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -104,7 +104,7 @@ func TestSuccessAppendsToPreviousData(t *testing.T) {
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": ["1", "2"], "targeting_profiles": ["5", "6"]}}`))
 	}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -161,7 +161,7 @@ func TestMissingDistributionChannel(t *testing.T) {
 	}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+	enricher, failure := buildContentTargeting(server.Client(), server.URL)
 
 	assert.Empty(t, failure)
 
@@ -188,7 +188,7 @@ func TestMissingContent(t *testing.T) {
 	}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+	enricher, failure := buildContentTargeting(server.Client(), server.URL)
 
 	assert.Empty(t, failure)
 
@@ -218,7 +218,7 @@ func TestDecodeError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+	enricher, failure := buildContentTargeting(server.Client(), server.URL)
 
 	assert.Empty(t, failure)
 
@@ -253,7 +253,7 @@ func TestNetworkError(t *testing.T) {
 	}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), server.URL)
+	enricher, failure := buildContentTargeting(server.Client(), server.URL)
 
 	assert.Empty(t, failure)
 
@@ -286,7 +286,7 @@ func TestMissingEndpoint(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
 
-	enricher, failure := buildRequestEnricher(server.Client(), "")
+	enricher, failure := buildContentTargeting(server.Client(), "")
 
 	assert.Empty(t, failure)
 
@@ -318,7 +318,7 @@ func TestMissingEndpoint(t *testing.T) {
 func TestRequestAlreadyHasSegments(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -361,7 +361,7 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 func TestMissingSiteId(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -389,7 +389,7 @@ func TestMissingSiteId(t *testing.T) {
 }
 
 func TestMissingTemplate(t *testing.T) {
-	enricher := RequestEnricher{}
+	enricher := ContentTargeting{}
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
@@ -418,7 +418,7 @@ func TestMissingTemplate(t *testing.T) {
 func TestMissingContentUrl(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(respWriter http.ResponseWriter, req *http.Request) {}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -449,7 +449,7 @@ func Test404(t *testing.T) {
 		respWriter.WriteHeader(404)
 	}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -482,7 +482,7 @@ func TestEmptySegments(t *testing.T) {
 		respWriter.Write([]byte(`{"uuid": "test_uuid", "data": {"media_id": "test_id", "base_segments": [], "targeting_profiles": []}}`))
 	}))
 	defer server.Close()
-	enricher, _ := buildRequestEnricher(server.Client(), server.URL)
+	enricher, _ := buildContentTargeting(server.Client(), server.URL)
 
 	request := &openrtb2.BidRequest{
 		ID: "test_id",

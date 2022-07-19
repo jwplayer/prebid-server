@@ -17,6 +17,12 @@ const (
 	BaseDecodingErrorCode             = 305000
 )
 
+type EnrichmentFailed interface {
+	Error() string
+	Code() int
+	Severity() errortypes.Severity
+}
+
 type TargetingFailed struct {
 	Message string
 	code    int
