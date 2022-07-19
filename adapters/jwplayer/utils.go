@@ -8,8 +8,6 @@ import (
 	"github.com/prebid/prebid-server/macros"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/url"
-	"strconv"
-	"strings"
 	"text/template"
 )
 
@@ -46,99 +44,8 @@ func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	return params, nil
 }
 
-// copied from appnexus.go appnexusImpExtAppnexus
-type xandrImpExtParams struct {
-	PlacementID int `json:"placement_id,omitempty"`
-}
-
-// copied from appnexus.go appnexusImpExt
-type xandrImpExt struct {
-	Appnexus xandrImpExtParams `json:"appnexus"`
-}
-
-func GetXandrImpExt(placementId string) json.RawMessage {
-	id, conversionError := strconv.Atoi(placementId)
-	if conversionError != nil {
-		return nil
-	}
-
-	appnexusExt := &xandrImpExt{
-		Appnexus: xandrImpExtParams{
-			PlacementID: id,
-		},
-	}
-
-	jsonExt, jsonError := json.Marshal(appnexusExt)
-	if jsonError != nil {
-		return nil
-	}
-
-	return jsonExt
-}
-
-type xandrVideoExt struct {
-	Appnexus xandrVideoExtParams `json:"appnexus"`
-}
-
-type xandrVideoExtParams struct {
-	Context xandrContext `json:"context,omitempty"`
-}
-
-type xandrContext int
-
-const (
-	Unknown   xandrContext = 0
-	PreRoll   xandrContext = 1
-	MidRoll   xandrContext = 2
-	PostRoll  xandrContext = 3
-	Outstream xandrContext = 4
-)
-
-func SetXandrVideoExt(video *openrtb2.Video) {
-	context := GetXandrContext(*video)
-	if context == Unknown {
-		return
-	}
-
-	videoExt := xandrVideoExt{
-		Appnexus: xandrVideoExtParams{
-			Context: context,
-		},
-	}
-	video.Ext, _ = json.Marshal(videoExt)
-}
-
-func GetXandrContext(video openrtb2.Video) xandrContext {
-	if IsOutstream(video.Placement) == true {
-		return Outstream
-	}
-
-	if video.StartDelay == nil {
-		return Unknown
-	}
-
-	return GetXandrContextFromStartdelay(*video.StartDelay)
-}
-
-func GetXandrContextFromStartdelay(startDelay openrtb2.StartDelay) xandrContext {
-	if startDelay > 0 {
-		return MidRoll // startdelay > 0 indicates ad position in seconds
-	}
-
-	switch startDelay {
-	case openrtb2.StartDelayPreRoll:
-		return PreRoll
-	case openrtb2.StartDelayGenericMidRoll:
-		return MidRoll
-	case openrtb2.StartDelayGenericPostRoll:
-		return PostRoll
-	}
-
-	return Unknown
-}
-
-func IsOutstream(placement openrtb2.VideoPlacementType) bool {
-	return placement > 1
+func IsOutstream(placementType openrtb2.VideoPlacementType) bool {
+	return placementType > 1
 }
 
 func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
@@ -250,20 +157,6 @@ func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 	return segments
 }
 
-func WriteToXandrKeywords(keywords *string, jwpsegs []string) {
-	if len(jwpsegs) == 0 {
-		return
-	}
-
-	if len(*keywords) > 0 {
-		*keywords += ","
-	}
-
-	jwpsegToKeyword := func(jwpseg string) string { return "jwpseg=" + jwpseg }
-	newKeywords := Map(jwpsegs, jwpsegToKeyword)
-	*keywords += strings.Join(newKeywords, ",")
-}
-
 func Map[T any, M any](inputs []T, f func(T) M) []M {
 	outputs := make([]M, len(inputs))
 	for i, element := range inputs {
@@ -315,17 +208,4 @@ func MakeSChainNode(publisherId string, requestId string) openrtb_ext.ExtRequest
 		RID: requestId,
 		HP:  1,
 	}
-}
-
-func GetXandrRequestExt(schain openrtb_ext.ExtRequestPrebidSChainSChain) json.RawMessage {
-	// Xandr expects the SChain to be in accordance with oRTB 2.4
-	// $.ext.schain
-	requestExtension := requestExt{
-		SChain: schain,
-	}
-	jsonExt, jsonError := json.Marshal(requestExtension)
-	if jsonError != nil {
-		return nil
-	}
-	return jsonExt
 }
