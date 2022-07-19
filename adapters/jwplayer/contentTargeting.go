@@ -42,16 +42,16 @@ type TargetingData struct {
 }
 
 type Enricher interface {
-	EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed
+	EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed
 }
 
-type RequestEnricher struct {
+type ContentTargeting struct {
 	httpClient       *http.Client
 	EndpointTemplate *template.Template
 }
 
-func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*RequestEnricher, *TargetingFailed) {
-	template, parseError := template.New("targetingEndpointTemplate").Parse(targetingEndpoint)
+func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTargeting, *TargetingFailed) {
+	template, parseError := template.New("targetingEndpointTemplate").Parse(endpoint)
 	var buildError *TargetingFailed = nil
 	if parseError != nil {
 		buildError = &TargetingFailed{
@@ -60,19 +60,19 @@ func buildRequestEnricher(httpClient *http.Client, targetingEndpoint string) (*R
 		}
 	}
 
-	return &RequestEnricher{
+	return &ContentTargeting{
 		httpClient:       httpClient,
 		EndpointTemplate: template,
 	}, buildError
 }
 
-func (enricher *RequestEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
 	if site := request.Site; site != nil {
-		return enricher.enrichFields(&site.Keywords, site.Content, siteId)
+		return ct.enrichFields(&site.Keywords, site.Content, siteId)
 	}
 
 	if app := request.App; app != nil {
-		return enricher.enrichFields(&app.Keywords, app.Content, siteId)
+		return ct.enrichFields(&app.Keywords, app.Content, siteId)
 	}
 
 	return &TargetingFailed{
@@ -81,7 +81,7 @@ func (enricher *RequestEnricher) EnrichRequest(request *openrtb2.BidRequest, sit
 	}
 }
 
-func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
+func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
 	if content == nil {
 		return &TargetingFailed{
 			Message: "Missing request.{site|app}.content",
@@ -102,7 +102,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 		}
 	}
 
-	if enricher.EndpointTemplate == nil {
+	if ct.EndpointTemplate == nil {
 		return &TargetingFailed{
 			Message: "Empty template",
 			code:    EmptyTemplateErrorCode,
@@ -117,7 +117,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 		}
 	}
 
-	targetingUrl := BuildTargetingEndpoint(enricher.EndpointTemplate, siteId, metadata)
+	targetingUrl := BuildTargetingEndpoint(ct.EndpointTemplate, siteId, metadata)
 	if targetingUrl == "" {
 		return &TargetingFailed{
 			Message: "Failed to build the targeting Url",
@@ -128,7 +128,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 	channel := make(chan TargetingOutcome, 1)
 
 	go func() {
-		response, err := enricher.fetchContentTargeting(targetingUrl)
+		response, err := ct.fetchEnrichment(targetingUrl)
 		channel <- TargetingOutcome{
 			response: response,
 			error:    err,
@@ -158,7 +158,7 @@ func (enricher *RequestEnricher) enrichFields(keywords *string, content *openrtb
 	return nil
 }
 
-func (enricher *RequestEnricher) fetchContentTargeting(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
+func (ct *ContentTargeting) fetchEnrichment(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
 	httpReq, newReqErr := http.NewRequest("GET", targetingUrl, nil)
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
@@ -167,7 +167,7 @@ func (enricher *RequestEnricher) fetchContentTargeting(targetingUrl string) (*Ta
 		}
 	}
 
-	resp, reqFail := enricher.httpClient.Do(httpReq)
+	resp, reqFail := ct.httpClient.Do(httpReq)
 	if reqFail != nil {
 		return nil, &TargetingFailed{
 			Message: fmt.Sprintf("Request Execution failure: %s", reqFail.Error()),
