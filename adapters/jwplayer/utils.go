@@ -146,11 +146,8 @@ func BuildTargetingEndpoint(endpointTemplate *template.Template, siteId string, 
 }
 
 func ParseJwpsegs(segments []openrtb2.Segment) []string {
-	jwpsegs := make([]string, len(segments))
-	for index, segment := range segments {
-		jwpsegs[index] = segment.Value
-	}
-
+	segmentToJwpseg := func(segment openrtb2.Segment) string { return segment.Value }
+	jwpsegs := Map(segments, segmentToJwpseg)
 	return jwpsegs
 }
 
@@ -169,14 +166,8 @@ func MakeOrtbDatum(jwpsegs []string) (contentData openrtb2.Data) {
 }
 
 func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
-	segments := make([]openrtb2.Segment, len(jwpsegs))
-	for index, jwpseg := range jwpsegs {
-		segment := openrtb2.Segment{
-			Value: jwpseg,
-		}
-		segments[index] = segment
-	}
-
+	jwpsegToSegment := func(jwpseg string) openrtb2.Segment { return openrtb2.Segment{Value: jwpseg} }
+	segments := Map(jwpsegs, jwpsegToSegment)
 	return segments
 }
 
@@ -189,16 +180,15 @@ func WriteToXandrKeywords(keywords *string, jwpsegs []string) {
 		*keywords += ","
 	}
 
-	*keywords += ConvertToXandrKeywords(jwpsegs)
+	jwpsegToKeyword := func(jwpseg string) string { return "jwpseg=" + jwpseg }
+	newKeywords := Map(jwpsegs, jwpsegToKeyword)
+	*keywords += strings.Join(newKeywords, ",")
 }
 
-func ConvertToXandrKeywords(jwpsegs []string) string {
-	if len(jwpsegs) == 0 {
-		return ""
+func Map[T any, M any](inputs []T, f func(T) M) []M {
+	outputs := make([]M, len(inputs))
+	for i, element := range inputs {
+		outputs[i] = f(element)
 	}
-
-	keyword := "jwpseg="
-	// expected format: jwpseg=1,jwpseg=2,jwpseg=3
-	keyword += strings.Join(jwpsegs, ","+keyword)
-	return keyword
+	return outputs
 }
