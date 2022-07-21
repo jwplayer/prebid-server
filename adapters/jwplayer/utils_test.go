@@ -216,17 +216,6 @@ func TestMakeOrtbSegments(t *testing.T) {
 	assert.ElementsMatch(t, segments, expectedSegments)
 }
 
-func TestConvertToXandrKeywords(t *testing.T) {
-	var emptyJwpsegs []string
-	assert.Equal(t, "", ConvertToXandrKeywords(emptyJwpsegs))
-
-	singleJwpseg := []string{"80808080"}
-	assert.Equal(t, "jwpseg=80808080", ConvertToXandrKeywords(singleJwpseg))
-
-	multipleJwpsegs := []string{"88888888", "80808080", "80088008"}
-	assert.Equal(t, "jwpseg=88888888,jwpseg=80808080,jwpseg=80088008", ConvertToXandrKeywords(multipleJwpsegs))
-}
-
 func TestWriteToXandrKeywords(t *testing.T) {
 	keyword := "key=value"
 	var jwpsegs []string
