@@ -71,7 +71,7 @@ func SetXandrVideoExt(video *openrtb2.Video) {
 }
 
 func GetXandrContext(video openrtb2.Video) xandrContext {
-	if IsOutstream(video.Placement) == true {
+	if IsInstream(video.Placement) == false {
 		return Outstream
 	}
 
