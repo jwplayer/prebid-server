@@ -63,13 +63,12 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
-	for _, imp := range requestCopy.Imp {
-		params, parserError := a.parseBidderParams(imp)
-		if parserError != nil {
-			errors = append(errors, parserError)
+	for idx, imp := range requestCopy.Imp {
+		err := a.sanitizeImp(&imp)
+		if err != nil {
+			err.Message = fmt.Sprintf("Imp #%d, ID %s, is invalid: %s", idx, imp.ID, err.Message)
+			errors = append(errors, err)
 		} else {
-			placementId := params.PlacementId
-			a.sanitizeImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -84,41 +83,32 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	requestCopy.Imp = validImps
 
-	var publisherParams *jwplayerPublisher
-
-	if site := requestCopy.Site; site != nil {
-		// per Xandr doc, if set, this should equal the Xandr placement code.
-		// It is best to remove, since placement code is set to imp.TagID
-		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-SiteObjectSiteObject
-		site.ID = ""
-
-		if publisher := site.Publisher; publisher != nil {
-			a.sanitizePublisher(publisher)
-			publisherParams = ParsePublisherParams(*publisher)
-		}
+	if distributionChannelError := a.sanitizeDistributionChannels(requestCopy.Site, requestCopy.App); distributionChannelError != nil {
+		errors = append(errors, distributionChannelError)
+		return nil, errors
 	}
 
-	if app := requestCopy.App; app != nil {
-		// per Xandr doc, if set, used to look up an Xandr tinytag ID by tinytag code.
-		// It is best to remove, since Xandr expects an ID specific to its platform
-		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
-		app.ID = ""
-
-		if publisher := app.Publisher; publisher != nil {
-			a.sanitizePublisher(publisher)
-			publisherParams = ParsePublisherParams(*publisher)
-		}
+	publisher, missingPublisherError := a.getPublisher(requestCopy.Site, requestCopy.App)
+	if missingPublisherError != nil {
+		errors = append(errors, missingPublisherError)
+		return nil, errors
 	}
 
-	siteId := ""
-	if publisherParams != nil {
-		siteId = publisherParams.SiteId
+	a.sanitizePublisher(publisher)
+
+	publisherParams, invalidJwplayerPubExt := a.getJwplayerPublisherExt(publisher.Ext)
+	if invalidJwplayerPubExt != nil {
+		errors = append(errors, invalidJwplayerPubExt)
+		return nil, errors
 	}
 
-	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, siteId)
+	a.setXandrSChain(&requestCopy, publisherParams.PublisherId)
+
+	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
+
 	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
@@ -143,6 +133,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
+
 		return nil, nil
 	}
 
@@ -180,21 +171,15 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	return bidderResponse, nil
 }
 
-func (a *Adapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
-	var impExt adapters.ExtImpBidder
-	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
-		return nil, err
+func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
+	params, parseError := ParseBidderParams(*imp)
+	if parseError != nil {
+		return &errortypes.BadInput{
+			Message: "Invalid Ext: " + parseError.Error(),
+		}
 	}
 
-	var params openrtb_ext.ImpExtJWPlayer
-	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
-		return nil, err
-	}
-
-	return &params, nil
-}
-
-func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
+	placementId := params.PlacementId
 	imp.TagID = placementId
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = GetAppnexusExt(placementId)
@@ -202,6 +187,55 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
 		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
 		imp.Video = &openrtb2.Video{}
 	}
+
+	return nil
+}
+
+func (a *Adapter) sanitizeDistributionChannels(site *openrtb2.Site, app *openrtb2.App) *errortypes.BadInput {
+	if site == nil && app == nil {
+		return &errortypes.BadInput{
+			Message: "The bid request did not contain a Site or App field. Please populate $.{site|app}.",
+		}
+	}
+
+	if site != nil && app != nil {
+		return &errortypes.BadInput{
+			Message: "Per oRTB 2.5, The bid request cannot contain both a Site and App field. Please populate either $.site or $.app.",
+		}
+	}
+
+	if site != nil {
+		// per Xandr doc, if set, this should equal the Xandr placement code.
+		// It is best to remove, since placement code is set to imp.TagID
+		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-SiteObjectSiteObject
+		site.ID = ""
+
+	}
+
+	if app != nil {
+		// per Xandr doc, if set, used to look up an Xandr tinytag ID by tinytag code.
+		// It is best to remove, since Xandr expects an ID specific to its platform
+		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
+		app.ID = ""
+	}
+
+	return nil
+}
+
+func (a *Adapter) getPublisher(site *openrtb2.Site, app *openrtb2.App) (publisher *openrtb2.Publisher, err *errortypes.BadInput) {
+	if site != nil {
+		publisher = site.Publisher
+	} else if app != nil {
+		publisher = app.Publisher
+	}
+
+	if publisher == nil {
+		err = &errortypes.BadInput{
+			Message: "The bid request did not contain a Publisher field. Please populate $.{site|app}.publisher .",
+		}
+	}
+
+	return publisher, err
 }
 
 func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
@@ -212,7 +246,60 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 	publisher.ID = ""
 }
 
+func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPublisher, *errortypes.BadInput) {
+	warningMessage := "The bid request is missing "
+	guidanceMessage := "\n$.{site|app}.publisher.ext.jwplayer.publisherId is required."
+
+	if pubExt == nil {
+		return nil, &errortypes.BadInput{
+			Message: warningMessage + "publisher.ext" + guidanceMessage,
+		}
+	}
+
+	var jwplayerPublisherExt publisherExt
+	if err := json.Unmarshal(pubExt, &jwplayerPublisherExt); err != nil {
+		return nil, &errortypes.BadInput{
+			Message: "Invalid publisher.ext.jwplayer in request: " + err.Error(),
+		}
+	}
+
+	if jwplayerPublisherExt.JWPlayer.PublisherId == "" {
+		return nil, &errortypes.BadInput{
+			Message: warningMessage + "publisher.ext.jwplayer.publisherId" + guidanceMessage,
+		}
+	}
+
+	return &jwplayerPublisherExt.JWPlayer, nil
+}
+
+func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId string) {
+	publisherSChain := GetPublisherSChain25(request.Source)
+	// We support request in the oRTB 2.5 format, whereas Xandr supports 2.4
+	// We discard the publisher's 2.5 schain to avoid the risk of confusion down the line for Xandr
+	a.clearPublisherSChain25(request.Source)
+	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
+	request.Ext = GetXandrRequestExt(sChain)
+}
+
+func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
+	if source == nil {
+		return
+	}
+	source.Ext = nil
+}
+
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
-	request.Device = &openrtb2.Device{}
+	if request.Device == nil {
+		request.Device = &openrtb2.Device{}
+	}
+}
+
+func parsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
+	var pubExt publisherExt
+	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
+		return nil
+	}
+
+	return &pubExt.JWPlayer
 }

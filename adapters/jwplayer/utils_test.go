@@ -20,6 +20,26 @@ func TestParseExtraInfo(t *testing.T) {
 	assert.Equal(t, defaultTargetingUrl, extraInfo.TargetingEndpoint)
 }
 
+func TestParseBidderParams(t *testing.T) {
+	params, err := ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+	})
+	assert.Empty(t, err)
+	assert.Equal(t, "1", params.PlacementId)
+
+	params, err = ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"else":{"placementId": "1"}}`),
+	})
+	assert.NotNil(t, err)
+	assert.Empty(t, params)
+
+	params, err = ParseBidderParams(openrtb2.Imp{
+		Ext: json.RawMessage(`{"bidder":{"otherId": "1"}}`),
+	})
+	assert.NotNil(t, err)
+	assert.Empty(t, params)
+}
+
 func TestGetAppnexusExt(t *testing.T) {
 	appnexusExt := GetAppnexusExt("1234")
 	var appnexusImp appnexusImpExt
@@ -30,16 +50,6 @@ func TestGetAppnexusExt(t *testing.T) {
 	badAppnexusExt := GetAppnexusExt("-/")
 	json.Unmarshal(badAppnexusExt, &badAppnexusImp)
 	assert.Empty(t, badAppnexusImp)
-}
-
-func TestParsePublisherParams(t *testing.T) {
-	publisher := openrtb2.Publisher{
-		Ext: json.RawMessage(`{"otherBidder":{"placementId": "test_placement_id"}, "jwplayer":{"siteId": "testSideId", "publisherId": "testPublisherId"}}`),
-	}
-
-	jwpub := ParsePublisherParams(publisher)
-	assert.Equal(t, "testSideId", jwpub.SiteId)
-	assert.Equal(t, "testPublisherId", jwpub.PublisherId)
 }
 
 func TestContentMetadataParseSuccess(t *testing.T) {

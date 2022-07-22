@@ -3,7 +3,10 @@ package jwplayer
 import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/macros"
+	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/url"
 	"strconv"
 	"strings"
@@ -21,6 +24,26 @@ func ParseExtraInfo(v string) ExtraInfo {
 	}
 
 	return extraInfo
+}
+
+func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
+	var impExt adapters.ExtImpBidder
+	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
+		return nil, err
+	}
+
+	var params *openrtb_ext.ImpExtJWPlayer
+	if err := json.Unmarshal(impExt.Bidder, &params); err != nil {
+		return nil, err
+	}
+
+	if params.PlacementId == "" {
+		return nil, &errortypes.BadInput{
+			Message: "Empty ext.prebid.bidder.jwplayer.placementId",
+		}
+	}
+
+	return params, nil
 }
 
 // copied from appnexus.go appnexusImpExtAppnexus
@@ -51,15 +74,6 @@ func GetAppnexusExt(placementId string) json.RawMessage {
 	}
 
 	return jsonExt
-}
-
-func ParsePublisherParams(publisher openrtb2.Publisher) *jwplayerPublisher {
-	var pubExt publisherExt
-	if err := json.Unmarshal(publisher.Ext, &pubExt); err != nil {
-		return nil
-	}
-
-	return &pubExt.JWPlayer
 }
 
 func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
@@ -191,4 +205,62 @@ func Map[T any, M any](inputs []T, f func(T) M) []M {
 		outputs[i] = f(element)
 	}
 	return outputs
+}
+
+type requestExt struct {
+	SChain openrtb_ext.ExtRequestPrebidSChainSChain `json:"schain"`
+}
+
+func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb_ext.ExtRequestPrebidSChainSChain) openrtb_ext.ExtRequestPrebidSChainSChain {
+	node := MakeSChainNode(publisherId, requestId)
+	isComplete := 1
+	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
+	if publisherSChain != nil {
+		isComplete = publisherSChain.Complete
+		nodes = publisherSChain.Nodes
+	}
+
+	nodes = append(nodes, &node)
+
+	return openrtb_ext.ExtRequestPrebidSChainSChain{
+		Ver:      "1.0",
+		Complete: isComplete,
+		Nodes:    nodes,
+	}
+}
+
+// GetPublisherSChain25 Get the SChain from the 2.5 oRTB spec
+func GetPublisherSChain25(source *openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
+	if source == nil {
+		return nil
+	}
+
+	var sourceExt openrtb_ext.SourceExt
+	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
+		return nil
+	}
+
+	return &sourceExt.SChain
+}
+
+func MakeSChainNode(publisherId string, requestId string) openrtb_ext.ExtRequestPrebidSChainSChainNode {
+	return openrtb_ext.ExtRequestPrebidSChainSChainNode{
+		ASI: jwplayerDomain,
+		SID: publisherId,
+		RID: requestId,
+		HP:  1,
+	}
+}
+
+func GetXandrRequestExt(schain openrtb_ext.ExtRequestPrebidSChainSChain) json.RawMessage {
+	// Xandr expects the SChain to be in accordance with oRTB 2.4
+	// $.ext.schain
+	requestExtension := requestExt{
+		SChain: schain,
+	}
+	jsonExt, jsonError := json.Marshal(requestExtension)
+	if jsonError != nil {
+		return nil
+	}
+	return jsonExt
 }
