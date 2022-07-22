@@ -40,13 +40,13 @@ func TestParseBidderParams(t *testing.T) {
 	assert.Empty(t, params)
 }
 
-func TestIsOutstream(t *testing.T) {
-	assert.False(t, IsOutstream(openrtb2.VideoPlacementTypeInStream))
+func TestIsInstream(t *testing.T) {
+	assert.True(t, IsInstream(openrtb2.VideoPlacementTypeInStream))
 
-	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInBanner))
-	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInArticle))
-	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInFeed))
-	assert.True(t, IsOutstream(openrtb2.VideoPlacementTypeInterstitialSliderFloating))
+	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInBanner))
+	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInArticle))
+	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInFeed))
+	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInterstitialSliderFloating))
 }
 
 func TestContentMetadataParseSuccess(t *testing.T) {
