@@ -44,8 +44,8 @@ func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	return params, nil
 }
 
-func IsOutstream(placementType openrtb2.VideoPlacementType) bool {
-	return placementType > 1
+func IsInstream(placementType openrtb2.VideoPlacementType) bool {
+	return placementType == openrtb2.VideoPlacementTypeInStream
 }
 
 func ParseContentMetadata(content openrtb2.Content) ContentMetadata {
