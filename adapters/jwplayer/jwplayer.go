@@ -13,8 +13,8 @@ import (
 )
 
 type Adapter struct {
-	endpoint string
-	enricher Enricher
+	endpoint   string
+	rtdAdapter RTDAdapter
 }
 
 type ExtraInfo struct {
@@ -43,16 +43,16 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	}
 
 	extraInfo := ParseExtraInfo(config.ExtraAdapterInfo)
-	var enricher Enricher
-	enricher, enricherBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
+	var rtdAdapter RTDAdapter
+	rtdAdapter, rtdAdapterBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
 
-	if enricherBuildError != nil {
-		fmt.Printf("Warning: a failure occured when building the Enricher: %s\n", enricherBuildError)
+	if rtdAdapterBuildError != nil {
+		fmt.Printf("Warning: a failure occured when building the RTDAdapter: %s\n", rtdAdapterBuildError)
 	}
 
 	bidder := &Adapter{
-		endpoint: config.Endpoint,
-		enricher: enricher,
+		endpoint:   config.Endpoint,
+		rtdAdapter: rtdAdapter,
 	}
 
 	return bidder, nil
@@ -104,7 +104,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	a.setXandrSChain(&requestCopy, publisherParams.PublisherId)
 
-	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
+	enrichmentFailure := a.rtdAdapter.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
