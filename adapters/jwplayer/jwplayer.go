@@ -112,7 +112,6 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
-	fmt.Println("Ready to make req ", string(requestJSON))
 	if err != nil {
 		errors = append(errors, err)
 		return nil, errors
@@ -134,13 +133,11 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
-		fmt.Println("StatusNoContent")
 
 		return nil, nil
 	}
 
 	if responseData.StatusCode == http.StatusBadRequest {
-		fmt.Println("StatusBadRequest")
 		err := &errortypes.BadInput{
 			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
 		}
@@ -148,7 +145,6 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	}
 
 	if responseData.StatusCode != http.StatusOK {
-		fmt.Println("!Ok")
 		err := &errortypes.BadServerResponse{
 			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
 		}
@@ -156,7 +152,6 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	}
 
 	var response openrtb2.BidResponse
-	fmt.Println("Got response:", string(responseData.Body))
 	if err := json.Unmarshal(responseData.Body, &response); err != nil {
 		return nil, []error{err}
 	}
