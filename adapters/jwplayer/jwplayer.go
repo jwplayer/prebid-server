@@ -9,33 +9,67 @@ import (
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
 	"net/http"
+	"time"
 )
 
-type JWPlayerAdapter struct {
+type Adapter struct {
 	endpoint string
+	enricher Enricher
+}
+
+type ExtraInfo struct {
+	TargetingEndpoint string `json:"targeting_endpoint,omitempty"`
+}
+
+type jwplayerPublisher struct {
+	PublisherId string `json:"publisherId,omitempty"`
+	SiteId      string `json:"siteId,omitempty"`
+}
+
+type publisherExt struct {
+	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
 }
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
-	bidder := &JWPlayerAdapter{
-		endpoint: config.Endpoint,
+	//configuration is consistent with default client cache config
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			MaxConnsPerHost:     0,
+			MaxIdleConns:        10,
+			MaxIdleConnsPerHost: 2,
+			IdleConnTimeout:     time.Duration(50) * time.Millisecond,
+		},
 	}
+
+	extraInfo := ParseExtraInfo(config.ExtraAdapterInfo)
+	var enricher Enricher
+	enricher, enricherBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
+
+	if enricherBuildError != nil {
+		fmt.Printf("Warning: a failure occured when building the Enricher: %s\n", enricherBuildError)
+	}
+
+	bidder := &Adapter{
+		endpoint: config.Endpoint,
+		enricher: enricher,
+	}
+
 	return bidder, nil
 }
 
-func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
+func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	var errors []error
 	requestCopy := *request
 	var validImps = make([]openrtb2.Imp, 0, len(request.Imp))
 
 	for _, imp := range requestCopy.Imp {
-		params, parserError := parseBidderParams(imp)
+		params, parserError := a.parseBidderParams(imp)
 		if parserError != nil {
 			errors = append(errors, parserError)
 		} else {
 			placementId := params.PlacementId
-			imp.TagID = placementId
-			imp.Ext = nil
+			a.sanitizeImp(&imp, placementId)
 			validImps = append(validImps, imp)
 		}
 	}
@@ -50,6 +84,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 
 	requestCopy.Imp = validImps
 
+	var publisherParams *jwplayerPublisher
+
 	if site := requestCopy.Site; site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
 		// It is best to remove, since placement code is set to imp.TagID
@@ -57,11 +93,8 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		site.ID = ""
 
 		if publisher := site.Publisher; publisher != nil {
-			// per Xandr doc, if set, this should equal the Xandr publisher code.
-			// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
-			// It is best to remove, since placement code is set to imp.TagID
-			// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
-			publisher.ID = ""
+			a.sanitizePublisher(publisher)
+			publisherParams = ParsePublisherParams(*publisher)
 		}
 	}
 
@@ -70,7 +103,23 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 		// It is best to remove, since Xandr expects an ID specific to its platform
 		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-AppObjectAppObject
 		app.ID = ""
+
+		if publisher := app.Publisher; publisher != nil {
+			a.sanitizePublisher(publisher)
+			publisherParams = ParsePublisherParams(*publisher)
+		}
 	}
+
+	siteId := ""
+	if publisherParams != nil {
+		siteId = publisherParams.SiteId
+	}
+
+	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, siteId)
+	if enrichmentFailure != nil {
+		errors = append(errors, enrichmentFailure)
+	}
+	a.sanitizeRequest(&requestCopy)
 
 	requestJSON, err := json.Marshal(requestCopy)
 	if err != nil {
@@ -92,7 +141,7 @@ func (a *JWPlayerAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	return []*adapters.RequestData{requestData}, errors
 }
 
-func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
@@ -131,7 +180,7 @@ func (a *JWPlayerAdapter) MakeBids(request *openrtb2.BidRequest, requestData *ad
 	return bidderResponse, nil
 }
 
-func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
+func (a *Adapter) parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	var impExt adapters.ExtImpBidder
 	if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
 		return nil, err
@@ -143,4 +192,27 @@ func parseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {
 	}
 
 	return &params, nil
+}
+
+func (a *Adapter) sanitizeImp(imp *openrtb2.Imp, placementId string) {
+	imp.TagID = placementId
+	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
+	imp.Ext = GetAppnexusExt(placementId)
+	if imp.Video == nil {
+		// Per results obtained when testing the bid request to Xandr, imp.video is mandatory
+		imp.Video = &openrtb2.Video{}
+	}
+}
+
+func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
+	// per Xandr doc, if set, this should equal the Xandr publisher code.
+	// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
+	// It is best to remove, since placement code is set to imp.TagID
+	// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
+	publisher.ID = ""
+}
+
+func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
+	// Per results obtained when testing the bid request to Xandr, $.device is mandatory
+	request.Device = &openrtb2.Device{}
 }
