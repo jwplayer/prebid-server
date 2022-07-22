@@ -66,14 +66,20 @@ func TestSingleRequest(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "test_placement_id",
+			TagID: "1",
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
 			},
+			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
-		Site:   &openrtb2.Site{},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
 		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
 	}
 
 	assert.Equal(t, expectedJSON, processedRequestJSON)
