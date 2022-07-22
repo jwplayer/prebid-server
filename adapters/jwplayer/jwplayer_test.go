@@ -13,22 +13,22 @@ import (
 )
 
 func getTestAdapter() adapters.Bidder {
-	var mockEnricher Enricher = &MockEnricher{}
+	var mockRtdAdapter RTDAdapter = &MockRTDAdapter{}
 	var testAdapter adapters.Bidder = &Adapter{
-		endpoint: "http://test.com/openrtb2",
-		enricher: mockEnricher,
+		endpoint:   "http://test.com/openrtb2",
+		rtdAdapter: mockRtdAdapter,
 	}
 	return testAdapter
 }
 
-type MockEnricher struct {
+type MockRTDAdapter struct {
 	Request *openrtb2.BidRequest
 	SiteId  string
 }
 
-func (enricher *MockEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
-	enricher.Request = request
-	enricher.SiteId = siteId
+func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
+	rtdAdapter.Request = request
+	rtdAdapter.SiteId = siteId
 	return nil
 }
 
@@ -526,11 +526,11 @@ func TestAppendingToExistingSchain(t *testing.T) {
 }
 
 func TestEnrichmentCall(t *testing.T) {
-	enrichmentSpy := &MockEnricher{}
-	var mockEnricher Enricher = enrichmentSpy
+	enrichmentSpy := &MockRTDAdapter{}
+	var mockRtdAdapter RTDAdapter = enrichmentSpy
 	var a adapters.Bidder = &Adapter{
-		endpoint: "http://test.com/openrtb2",
-		enricher: mockEnricher,
+		endpoint:   "http://test.com/openrtb2",
+		rtdAdapter: mockRtdAdapter,
 	}
 	var reqInfo adapters.ExtraRequestInfo
 

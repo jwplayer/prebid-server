@@ -41,7 +41,7 @@ type TargetingData struct {
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
-type Enricher interface {
+type RTDAdapter interface {
 	EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed
 }
 
@@ -128,7 +128,7 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	channel := make(chan TargetingOutcome, 1)
 
 	go func() {
-		response, err := ct.fetchEnrichment(targetingUrl)
+		response, err := ct.fetch(targetingUrl)
 		channel <- TargetingOutcome{
 			response: response,
 			error:    err,
@@ -158,7 +158,7 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	return nil
 }
 
-func (ct *ContentTargeting) fetchEnrichment(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
+func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
 	httpReq, newReqErr := http.NewRequest("GET", targetingUrl, nil)
 	if newReqErr != nil {
 		return nil, &TargetingFailed{
