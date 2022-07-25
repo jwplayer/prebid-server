@@ -116,6 +116,10 @@ func GetPublisherSChain25(source *openrtb2.Source) *openrtb_ext.ExtRequestPrebid
 		return nil
 	}
 
+	if sourceExt.SChain.Nodes == nil {
+		return nil
+	}
+
 	return &sourceExt.SChain
 }
 
