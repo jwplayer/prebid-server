@@ -39,9 +39,14 @@ func TestContentMetadataParseSuccess(t *testing.T) {
 	}
 
 	metadata := ParseContentMetadata(content)
-	assert.Equal(t, content.URL, metadata.Url)
-	assert.Equal(t, content.Title, metadata.Title)
-	assert.Equal(t, description, metadata.Description)
+
+	expectedMetadata := ContentMetadata{
+		Url:         "//test.medial.url/file.mp4",
+		Title:       "Test title",
+		Description: "Test Description",
+	}
+
+	assert.Equal(t, expectedMetadata, metadata)
 }
 
 func TestGetExistingJwpsegs(t *testing.T) {
@@ -112,15 +117,13 @@ func TestMakeOrtbDatum(t *testing.T) {
 	jwpsegs := []string{"1", "2", "3"}
 	datum := MakeOrtbDatum(jwpsegs)
 
-	assert.Equal(t, datum.Name, "jwplayer.com")
+	expectedDatum := openrtb2.Data{
+		Name:    "jwplayer.com",
+		Segment: []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}},
+		Ext:     json.RawMessage(`{"segtax":502}`),
+	}
 
-	var dataExt DataExt
-	json.Unmarshal(datum.Ext, &dataExt)
-	assert.Equal(t, dataExt.Segtax, 502)
-
-	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}}
-	assert.Len(t, datum.Segment, len(expectedSegments))
-	assert.ElementsMatch(t, datum.Segment, expectedSegments)
+	assert.Equal(t, expectedDatum, datum)
 }
 
 func TestMakeOrtbSegments(t *testing.T) {
