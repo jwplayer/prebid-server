@@ -9,14 +9,8 @@ import (
 
 func TestGetXandrImpExt(t *testing.T) {
 	appnexusExt := GetXandrImpExt("1234")
-	var appnexusImp xandrImpExt
-	json.Unmarshal(appnexusExt, &appnexusImp)
-	assert.Equal(t, 1234, appnexusImp.Appnexus.PlacementID)
-
-	var badAppnexusImp xandrImpExt
-	badAppnexusExt := GetXandrImpExt("-/")
-	json.Unmarshal(badAppnexusExt, &badAppnexusImp)
-	assert.Empty(t, badAppnexusImp)
+	expectedJSON := json.RawMessage(`{"appnexus":{"placement_id":1234}}`)
+	assert.Equal(t, expectedJSON, appnexusExt)
 }
 
 func TestSetXandrVideoExt(t *testing.T) {
@@ -26,18 +20,15 @@ func TestSetXandrVideoExt(t *testing.T) {
 
 	video.Placement = openrtb2.VideoPlacementTypeInArticle
 	SetXandrVideoExt(video)
-	assert.NotNil(t, video.Ext)
-	var ext xandrVideoExt
-	json.Unmarshal(video.Ext, &ext)
-	assert.Equal(t, Outstream, ext.Appnexus.Context)
+	expectedVideoExt := json.RawMessage(`{"appnexus":{"context":4}}`)
+	assert.Equal(t, expectedVideoExt, video.Ext)
 
 	video.Ext = nil
 	video.Placement = openrtb2.VideoPlacementTypeInStream
 	video.StartDelay = openrtb2.StartDelayGenericPostRoll.Ptr()
 	SetXandrVideoExt(video)
-	assert.NotNil(t, video.Ext)
-	json.Unmarshal(video.Ext, &ext)
-	assert.Equal(t, PostRoll, ext.Appnexus.Context)
+	expectedVideoExt = json.RawMessage(`{"appnexus":{"context":3}}`)
+	assert.Equal(t, expectedVideoExt, video.Ext)
 }
 
 func TestGetXandrContext(t *testing.T) {
