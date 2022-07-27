@@ -15,6 +15,16 @@ const (
 	HttpRequestExecutionErrorCode     = 303050
 	BaseNetworkErrorCode              = 304000
 	BaseDecodingErrorCode             = 305000
+	TroubleShootingDeviceIPErrorCode  = 400001
+	TroubleShootingDeviceIFAErrorCode
+	TroubleShootingUserErrorCode
+	TroubleShootingUserIdErrorCode
+	TroubleShootingBuyerUIdErrorCode
+	TroubleShootingSiteRefErrorCode
+	TroubleShootingSiteDomainErrorCode
+	TroubleShootingSitePageErrorCode
+	TroubleShootingAppDomainErrorCode
+	TroubleShootingAppBundleErrorCode
 )
 
 type EnrichmentFailed interface {
