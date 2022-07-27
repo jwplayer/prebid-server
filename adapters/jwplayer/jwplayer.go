@@ -306,14 +306,16 @@ func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (suggestions []error) {
 	if device := request.Device; device != nil {
 		if device.IP == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.device.ip",
+				code:    TroubleShootingDeviceIPErrorCode,
 			})
 		}
 
 		if device.IFA == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.device.ifa",
+				code:    TroubleShootingDeviceIFAErrorCode,
 			})
 		}
 	}
@@ -322,50 +324,58 @@ func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (s
 	const userIdFieldName = "$.user.id"
 	if user := request.User; user != nil {
 		if user.BuyerUID == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + buyerUserIdFieldName,
+				code:    TroubleShootingBuyerUIdErrorCode,
 			})
 		}
 
 		if user.ID == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + userIdFieldName,
+				code:    TroubleShootingUserIdErrorCode,
 			})
 		}
 	} else {
-		suggestions = append(suggestions, &errortypes.BadInput{
+		suggestions = append(suggestions, &Warning{
 			Message: TroubleshootingPrefix + buyerUserIdFieldName + " and " + userIdFieldName,
+			code:    TroubleShootingUserErrorCode,
 		})
 	}
 
 	if site := request.Site; site != nil {
 		if site.Ref == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.site.ref",
+				code:    TroubleShootingSiteRefErrorCode,
 			})
 		}
 
 		if site.Domain == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.site.domain",
+				code:    TroubleShootingSiteDomainErrorCode,
 			})
 		}
 
 		if site.Page == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.site.page",
+				code:    TroubleShootingSitePageErrorCode,
 			})
 		}
 	} else if app := request.App; app != nil {
 		if app.Domain == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.app.domain",
+				code:    TroubleShootingAppDomainErrorCode,
 			})
 		}
 
 		if app.Bundle == "" {
-			suggestions = append(suggestions, &errortypes.BadInput{
+			suggestions = append(suggestions, &Warning{
 				Message: TroubleshootingPrefix + "$.app.bundle",
+				code:    TroubleShootingAppBundleErrorCode,
 			})
 		}
 	}
