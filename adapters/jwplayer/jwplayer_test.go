@@ -735,10 +735,16 @@ func TestOpenRTBEmptyResponse(t *testing.T) {
 		StatusCode: http.StatusNoContent,
 	}
 	bidder := getTestAdapter()
-	bidResponse, errs := bidder.MakeBids(nil, nil, httpResp)
+	bidResponse, errs := bidder.MakeBids(&openrtb2.BidRequest{
+		Site:   &openrtb2.Site{},
+		Device: &openrtb2.Device{},
+	}, nil, httpResp)
 
 	assert.Nil(t, bidResponse, "Expected empty response")
-	assert.Empty(t, errs, "Expected 0 errors. Got %d", len(errs))
+	assert.Len(t, errs, 6)
+	for _, err := range errs {
+		assert.Equal(t, fmt.Sprintf("%T", &Warning{}), fmt.Sprintf("%T", err))
+	}
 }
 
 func TestOpenRTBBadResponse(t *testing.T) {
