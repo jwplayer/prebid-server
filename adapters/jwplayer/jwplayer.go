@@ -36,6 +36,7 @@ const (
 	DebugSuggestion                      = "Run with request.debug = 1 for more info."
 	MissingDistributionChannelSuggestion = "Please populate either $.site or $.app."
 	MissingPublisherExtSuggestion        = "$.{site|app}.publisher.ext.jwplayer.publisherId is required."
+	TroubleshootingPrefix                = "We recommend populating "
 )
 
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
@@ -141,7 +142,8 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	if responseData.StatusCode == http.StatusNoContent {
-		return nil, nil
+		suggestions := a.getTroubleShootingSuggestions(request)
+		return nil, suggestions
 	}
 
 	if responseData.StatusCode == http.StatusBadRequest {
@@ -299,4 +301,74 @@ func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 	if request.Device == nil {
 		request.Device = &openrtb2.Device{}
 	}
+}
+
+func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (suggestions []error) {
+	if device := request.Device; device != nil {
+		if device.IP == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.device.ip",
+			})
+		}
+
+		if device.IFA == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.device.ifa",
+			})
+		}
+	}
+
+	const buyerUserIdFieldName = "$.user.buyeruid"
+	const userIdFieldName = "$.user.id"
+	if user := request.User; user != nil {
+		if user.BuyerUID == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + buyerUserIdFieldName,
+			})
+		}
+
+		if user.ID == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + userIdFieldName,
+			})
+		}
+	} else {
+		suggestions = append(suggestions, &errortypes.BadInput{
+			Message: TroubleshootingPrefix + buyerUserIdFieldName + " and " + userIdFieldName,
+		})
+	}
+
+	if site := request.Site; site != nil {
+		if site.Ref == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.site.ref",
+			})
+		}
+
+		if site.Domain == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.site.domain",
+			})
+		}
+
+		if site.Page == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.site.page",
+			})
+		}
+	} else if app := request.App; app != nil {
+		if app.Domain == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.app.domain",
+			})
+		}
+
+		if app.Bundle == "" {
+			suggestions = append(suggestions, &errortypes.BadInput{
+				Message: TroubleshootingPrefix + "$.app.bundle",
+			})
+		}
+	}
+
+	return suggestions
 }
