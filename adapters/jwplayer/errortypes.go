@@ -27,25 +27,19 @@ const (
 	TroubleShootingAppBundleErrorCode
 )
 
-type EnrichmentFailed interface {
-	Error() string
-	Code() int
-	Severity() errortypes.Severity
-}
-
-type TargetingFailed struct {
+type Warning struct {
 	Message string
 	code    int
 }
 
-func (err *TargetingFailed) Error() string {
-	return err.Message
+func (w *Warning) Error() string {
+	return w.Message
 }
 
-func (err *TargetingFailed) Code() int {
-	return err.code
+func (w *Warning) Code() int {
+	return w.code
 }
 
-func (err *TargetingFailed) Severity() errortypes.Severity {
+func (w *Warning) Severity() errortypes.Severity {
 	return errortypes.SeverityWarning
 }

@@ -27,7 +27,7 @@ type DataExt struct {
 
 type TargetingOutcome struct {
 	response *TargetingResponse
-	error    *TargetingFailed
+	error    *Warning
 }
 
 type TargetingResponse struct {
@@ -46,11 +46,11 @@ type ContentTargeting struct {
 	EndpointTemplate *template.Template
 }
 
-func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTargeting, *TargetingFailed) {
+func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTargeting, *Warning) {
 	template, parseError := template.New("targetingEndpointTemplate").Parse(endpoint)
-	var buildError *TargetingFailed = nil
+	var buildError *Warning = nil
 	if parseError != nil {
-		buildError = &TargetingFailed{
+		buildError = &Warning{
 			Message: fmt.Sprintf("Unable to parse targeting url template: %v", parseError),
 			code:    EndpointTemplateErrorCode,
 		}
@@ -62,7 +62,7 @@ func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTa
 	}, buildError
 }
 
-func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) *Warning {
 	if site := request.Site; site != nil {
 		return ct.enrichFields(&site.Keywords, site.Content, siteId)
 	}
@@ -71,15 +71,15 @@ func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId s
 		return ct.enrichFields(&app.Keywords, app.Content, siteId)
 	}
 
-	return &TargetingFailed{
+	return &Warning{
 		Message: "Missing request.{site|app}",
 		code:    MissingDistributionChannelErrorCode,
 	}
 }
 
-func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *TargetingFailed {
+func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *Warning {
 	if content == nil {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Missing request.{site|app}.content",
 			code:    MissingContentBlockErrorCode,
 		}
@@ -92,14 +92,14 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	}
 
 	if siteId == "" {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Missing publisher.ext.jwplayer.SiteId",
 			code:    MissingSiteIdErrorCode,
 		}
 	}
 
 	if ct.EndpointTemplate == nil {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Empty template",
 			code:    EmptyTemplateErrorCode,
 		}
@@ -107,7 +107,7 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 
 	metadata := ParseContentMetadata(*content)
 	if IsValidMediaUrl(metadata.Url) == false {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Invalid Media Url",
 			code:    MissingMediaUrlErrorCode,
 		}
@@ -115,7 +115,7 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 
 	targetingUrl := BuildTargetingEndpoint(ct.EndpointTemplate, siteId, metadata)
 	if targetingUrl == "" {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Failed to build the targeting Url",
 			code:    TargetingUrlErrorCode,
 		}
@@ -140,7 +140,7 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	targetingResponse := targetingOutcome.response
 	jwpsegs = GetAllJwpsegs(targetingResponse.Data)
 	if len(jwpsegs) == 0 {
-		return &TargetingFailed{
+		return &Warning{
 			Message: "Empty Targeting Segments",
 			code:    EmptyTargetingSegmentsErrorCode,
 		}
@@ -154,10 +154,10 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	return nil
 }
 
-func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *TargetingFailed) {
+func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *Warning) {
 	httpReq, newReqErr := http.NewRequest("GET", targetingUrl, nil)
 	if newReqErr != nil {
-		return nil, &TargetingFailed{
+		return nil, &Warning{
 			Message: fmt.Sprintf("Failed to instantiate request: %s", newReqErr.Error()),
 			code:    HttpRequestInstantiationErrorCode,
 		}
@@ -165,7 +165,7 @@ func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *Tar
 
 	resp, reqFail := ct.httpClient.Do(httpReq)
 	if reqFail != nil {
-		return nil, &TargetingFailed{
+		return nil, &Warning{
 			Message: fmt.Sprintf("Request Execution failure: %s", reqFail.Error()),
 			code:    HttpRequestExecutionErrorCode,
 		}
@@ -173,7 +173,7 @@ func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *Tar
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		return nil, &TargetingFailed{
+		return nil, &Warning{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
 			code:    BaseNetworkErrorCode + statusCode,
 		}
@@ -183,7 +183,7 @@ func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *Tar
 
 	targetingResponse := TargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
-		return nil, &TargetingFailed{
+		return nil, &Warning{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
 			code:    BaseDecodingErrorCode,
 		}

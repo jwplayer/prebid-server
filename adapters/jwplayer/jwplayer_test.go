@@ -26,7 +26,7 @@ type MockRTDAdapter struct {
 	SiteId  string
 }
 
-func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
+func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) *Warning {
 	rtdAdapter.Request = request
 	rtdAdapter.SiteId = siteId
 	return nil
