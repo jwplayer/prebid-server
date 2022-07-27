@@ -62,7 +62,7 @@ func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTa
 	}, buildError
 }
 
-func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
+func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) *TargetingFailed {
 	if site := request.Site; site != nil {
 		return ct.enrichFields(&site.Keywords, site.Content, siteId)
 	}
