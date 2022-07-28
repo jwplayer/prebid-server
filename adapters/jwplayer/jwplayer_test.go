@@ -65,8 +65,7 @@ func TestSingleRequest(t *testing.T) {
 	expectedJSON := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
-			ID:    "test_imp_id",
-			TagID: "1",
+			ID: "test_imp_id",
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
@@ -144,12 +143,10 @@ func TestInvalidImpAreFiltered(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id_valid",
 			Video: &openrtb2.Video{},
-			TagID: "1",
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}, {
 			ID:    "test_imp_id_valid_2",
 			Video: &openrtb2.Video{},
-			TagID: "2",
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":2}}`),
 		}},
 		Site: &openrtb2.Site{
@@ -197,8 +194,7 @@ func TestImpVideoExt(t *testing.T) {
 	expectedRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
-			ID:    "test_imp_id",
-			TagID: "1",
+			ID: "test_imp_id",
 			Video: &openrtb2.Video{
 				H: 250,
 				W: 350,
@@ -228,8 +224,7 @@ func TestImpVideoExt(t *testing.T) {
 	expectedRequest = &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
-			ID:    "test_imp_id",
-			TagID: "1",
+			ID: "test_imp_id",
 			Video: &openrtb2.Video{
 				H:         250,
 				W:         350,
@@ -259,8 +254,7 @@ func TestImpVideoExt(t *testing.T) {
 	expectedRequest = &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
-			ID:    "test_imp_id",
-			TagID: "1",
+			ID: "test_imp_id",
 			Video: &openrtb2.Video{
 				H:          250,
 				W:          350,
@@ -316,7 +310,6 @@ func TestIdsAreRemoved(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "1",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -363,7 +356,6 @@ func TestIdsAreRemoved(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "1",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -409,7 +401,6 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "1",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -555,7 +546,6 @@ func TestSChain(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "1",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -616,7 +606,6 @@ func TestAppendingToExistingSchain(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "2",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":2}}`),
 		}},
@@ -714,7 +703,6 @@ func TestSourceSanitization(t *testing.T) {
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:    "test_imp_id",
-			TagID: "1",
 			Video: &openrtb2.Video{},
 			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
