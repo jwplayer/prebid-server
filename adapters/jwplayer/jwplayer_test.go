@@ -13,22 +13,22 @@ import (
 )
 
 func getTestAdapter() adapters.Bidder {
-	var mockEnricher Enricher = &MockEnricher{}
+	var mockRtdAdapter RTDAdapter = &MockRTDAdapter{}
 	var testAdapter adapters.Bidder = &Adapter{
-		endpoint: "http://test.com/openrtb2",
-		enricher: mockEnricher,
+		endpoint:   "http://test.com/openrtb2",
+		rtdAdapter: mockRtdAdapter,
 	}
 	return testAdapter
 }
 
-type MockEnricher struct {
+type MockRTDAdapter struct {
 	Request *openrtb2.BidRequest
 	SiteId  string
 }
 
-func (enricher *MockEnricher) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
-	enricher.Request = request
-	enricher.SiteId = siteId
+func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed {
+	rtdAdapter.Request = request
+	rtdAdapter.SiteId = siteId
 	return nil
 }
 
@@ -36,7 +36,7 @@ func TestSingleRequest(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -53,14 +53,14 @@ func TestSingleRequest(t *testing.T) {
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
 	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
 
 	expectedJSON := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -82,14 +82,14 @@ func TestSingleRequest(t *testing.T) {
 		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
 	}
 
-	assert.Equal(t, expectedJSON, processedRequestJSON)
+	assert.Equal(t, expectedJSON, bidRequest)
 }
 
 func TestInvalidImpExt(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id_1",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -97,7 +97,7 @@ func TestInvalidImpExt(t *testing.T) {
 		}},
 	}
 
-	result, err := a.MakeRequests(request, &reqInfo)
+	result, err := a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Len(t, err, 2, "2 errors should be returned")
 	assert.Empty(t, result, "Result should be nil")
@@ -107,7 +107,7 @@ func TestInvalidImpAreFiltered(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id_1",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id_valid",
@@ -124,44 +124,51 @@ func TestInvalidImpAreFiltered(t *testing.T) {
 		}},
 		Site: &openrtb2.Site{
 			Publisher: &openrtb2.Publisher{
-				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId":"testPublisherId"}}`),
 			},
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Len(t, err, 2, "2 errors should be returned")
-	assert.NotNil(t, processedRequests, "Result should be nil")
+	assert.NotNil(t, processedRequests, "Result should be valid. Some impressions are valid")
 	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
 	processedRequest := processedRequests[0]
 	processedRequestJSON := &openrtb2.BidRequest{}
 	json.Unmarshal(processedRequest.Body, processedRequestJSON)
 
-	assert.Len(t, processedRequestJSON.Imp, 2, "Imp count should be equal or less than Imps from input. In this test, should be 2.")
-	assert.Equal(t, "1", processedRequestJSON.Imp[0].TagID, "placement id should be set to TagID")
-	assert.Equal(t, "2", processedRequestJSON.Imp[1].TagID, "placement id should be set to TagID")
-	assert.NotNil(t, processedRequestJSON.Imp[0].Video, "Video should be populated")
-	assert.NotNil(t, processedRequestJSON.Imp[1].Video, "Video should be populated")
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id_1",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id_valid",
+			Video: &openrtb2.Video{},
+			TagID: "1",
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}, {
+			ID:    "test_imp_id_valid_2",
+			Video: &openrtb2.Video{},
+			TagID: "2",
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":2}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId":"testPublisherId"}}`),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id_1","hp":1}],"ver":"1.0"}}`)),
+	}
 
-	assert.NotNil(t, processedRequestJSON.Imp[0].Ext, "Ext should be deleted")
-	assert.NotNil(t, processedRequestJSON.Imp[1].Ext, "Ext should be deleted")
-
-	ext1 := &xandrImpExt{}
-	json.Unmarshal(processedRequestJSON.Imp[0].Ext, ext1)
-	assert.Equal(t, 1, ext1.Appnexus.PlacementID)
-
-	ext2 := &xandrImpExt{}
-	json.Unmarshal(processedRequestJSON.Imp[1].Ext, ext2)
-	assert.Equal(t, 2, ext2.Appnexus.PlacementID)
+	assert.Equal(t, expectedRequest, processedRequestJSON)
 }
 
 func TestImpVideoExt(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -178,53 +185,108 @@ func TestImpVideoExt(t *testing.T) {
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
 	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	video := processedRequestJSON.Imp[0].Video
-	assert.Empty(t, video.Ext)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
 
-	request.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInFeed
-	processedRequests, err = a.MakeRequests(request, &reqInfo)
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{
+				H: 250,
+				W: 350,
+			},
+			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+
+	assert.Equal(t, expectedRequest, bidRequest)
+
+	rawRequest.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInFeed
+	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
 	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
 	processedRequest = processedRequests[0]
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	video = processedRequestJSON.Imp[0].Video
-	assert.NotNil(t, video.Ext)
+	json.Unmarshal(processedRequest.Body, bidRequest)
 
-	var ext xandrVideoExt
-	json.Unmarshal(video.Ext, &ext)
-	assert.Equal(t, Outstream, ext.Appnexus.Context)
+	expectedRequest = &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{
+				H:         250,
+				W:         350,
+				Placement: openrtb2.VideoPlacementTypeInFeed,
+				Ext:       json.RawMessage(`{"appnexus":{"context":4}}`),
+			},
+			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
 
-	request.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInStream
-	request.Imp[0].Video.StartDelay = openrtb2.StartDelay(10).Ptr()
-	processedRequests, err = a.MakeRequests(request, &reqInfo)
+	assert.Equal(t, expectedRequest, bidRequest)
 
-	assert.Empty(t, err, "Errors array should be empty")
-	assert.Len(t, processedRequests, 1, "Only one request should be returned")
+	rawRequest.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInStream
+	rawRequest.Imp[0].Video.StartDelay = openrtb2.StartDelay(10).Ptr()
+	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	processedRequest = processedRequests[0]
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	video = processedRequestJSON.Imp[0].Video
-	assert.NotNil(t, video.Ext)
+	json.Unmarshal(processedRequest.Body, bidRequest)
 
-	json.Unmarshal(video.Ext, &ext)
-	assert.Equal(t, MidRoll, ext.Appnexus.Context)
+	expectedRequest = &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{
+				H:          250,
+				W:          350,
+				Placement:  openrtb2.VideoPlacementTypeInStream,
+				StartDelay: openrtb2.StartDelay(10).Ptr(),
+				Ext:        json.RawMessage(`{"appnexus":{"context":2}}`),
+			},
+			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestIdsAreRemoved(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -241,23 +303,37 @@ func TestIdsAreRemoved(t *testing.T) {
 		},
 	}
 
-	processedRequest, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
-	assert.Len(t, processedRequest, 1, "Only one request should be returned")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
-	result := processedRequest[0]
-	resultJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(result.Body, resultJSON)
+	request := processedRequests[0]
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(request.Body, bidRequest)
 
-	assert.Len(t, resultJSON.Imp, 1, "Imp count should be equal or less than Imps from input. In this test, should be 1.")
-	assert.NotNil(t, resultJSON.Imp[0].Ext, "Ext should be set")
-	assert.NotEmpty(t, resultJSON.Site, "Site object should not be removed")
-	assert.Empty(t, resultJSON.Site.ID, "Site.id should be removed")
-	assert.NotEmpty(t, resultJSON.Site.Publisher, "Publisher object should not be removed")
-	assert.Empty(t, resultJSON.Site.Publisher.ID, "Publisher.id should be removed")
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Domain: "test_domain",
+			Publisher: &openrtb2.Publisher{
+				Name: "testPublisher_name",
+				Ext:  json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
 
-	request = &openrtb2.BidRequest{
+	assert.Equal(t, expectedRequest, bidRequest)
+
+	rawRequest = &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -274,28 +350,42 @@ func TestIdsAreRemoved(t *testing.T) {
 		},
 	}
 
-	processedRequest, err = a.MakeRequests(request, &reqInfo)
+	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
-	assert.Len(t, processedRequest, 1, "Only one request should be returned")
+	assert.Len(t, processedRequests, 1, "Only one request should be returned")
 
-	result = processedRequest[0]
-	resultJSON = &openrtb2.BidRequest{}
-	json.Unmarshal(result.Body, resultJSON)
+	request = processedRequests[0]
+	bidRequest = &openrtb2.BidRequest{}
+	json.Unmarshal(request.Body, bidRequest)
 
-	assert.Len(t, resultJSON.Imp, 1, "Imp count should be equal or less than Imps from input. In this test, should be 1.")
-	assert.NotNil(t, resultJSON.Imp[0].Ext, "Ext should be set")
-	assert.NotEmpty(t, resultJSON.App, "App object should not be removed")
-	assert.Empty(t, resultJSON.App.ID, "App.id should be removed")
-	assert.NotEmpty(t, resultJSON.App.Publisher, "Publisher object should not be removed")
-	assert.Empty(t, resultJSON.App.Publisher.ID, "Publisher.id should be removed")
+	expectedRequest = &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		App: &openrtb2.App{
+			Domain: "test_app_domain",
+			Publisher: &openrtb2.Publisher{
+				Name: "testPublisher_name",
+				Ext:  json.RawMessage(`{"jwplayer":{"publisherId":"testPublisherId"}}`),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -308,14 +398,30 @@ func TestMandatoryRequestParamsAreAdded(t *testing.T) {
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 	assert.Empty(t, err)
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	assert.NotNil(t, processedRequestJSON.Device)
-	assert.NotNil(t, processedRequestJSON.Imp[0].Video)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
+
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestBadInputMissingDistributionChannel(t *testing.T) {
@@ -425,7 +531,7 @@ func TestSChain(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -438,26 +544,30 @@ func TestSChain(t *testing.T) {
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 	assert.Empty(t, err)
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	assert.NotNil(t, processedRequestJSON.Ext)
-	var requestExtJSON requestExt
-	parseErr := json.Unmarshal(processedRequestJSON.Ext, &requestExtJSON)
-	assert.Nil(t, parseErr)
-	assert.NotNil(t, requestExtJSON.SChain)
-	sChain := requestExtJSON.SChain
-	assert.Equal(t, 1, sChain.Complete)
-	assert.Equal(t, "1.0", sChain.Ver)
-	assert.Len(t, sChain.Nodes, 1)
-	node := sChain.Nodes[0]
-	assert.Equal(t, jwplayerDomain, node.ASI)
-	assert.Equal(t, "testPublisherId", node.SID)
-	assert.Equal(t, "test_id", node.RID)
-	assert.Equal(t, 1, node.HP)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
+
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestAppendingToExistingSchain(t *testing.T) {
@@ -479,7 +589,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 
 	sourceExtJSON, _ := json.Marshal(sourceExt)
 
-	request := &openrtb2.BidRequest{
+	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
 			ID:  "test_imp_id",
@@ -495,42 +605,40 @@ func TestAppendingToExistingSchain(t *testing.T) {
 		},
 	}
 
-	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
 	assert.Empty(t, err)
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	assert.NotNil(t, processedRequestJSON.Ext)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
 
-	var requestExtJSON requestExt
-	parseErr := json.Unmarshal(processedRequestJSON.Ext, &requestExtJSON)
-	assert.Nil(t, parseErr)
-	assert.NotNil(t, requestExtJSON.SChain)
-	sChain := requestExtJSON.SChain
-	assert.Equal(t, 0, sChain.Complete)
-	assert.Equal(t, "1.0", sChain.Ver)
-	assert.Len(t, sChain.Nodes, 2)
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "2",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":2}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Source: &openrtb2.Source{},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":0,"nodes":[{"asi":"publisher.com","sid":"some id","rid":"some req id","hp":0},{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
 
-	publisherNode := sChain.Nodes[0]
-	assert.Equal(t, "publisher.com", publisherNode.ASI)
-	assert.Equal(t, "some id", publisherNode.SID)
-	assert.Equal(t, "some req id", publisherNode.RID)
-	assert.Equal(t, 0, publisherNode.HP)
-
-	jwplayerNode := sChain.Nodes[1]
-	assert.Equal(t, jwplayerDomain, jwplayerNode.ASI)
-	assert.Equal(t, "testPublisherId", jwplayerNode.SID)
-	assert.Equal(t, "test_id", jwplayerNode.RID)
-	assert.Equal(t, 1, jwplayerNode.HP)
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestEnrichmentCall(t *testing.T) {
-	enrichmentSpy := &MockEnricher{}
-	var mockEnricher Enricher = enrichmentSpy
+	enrichmentSpy := &MockRTDAdapter{}
+	var mockRtdAdapter RTDAdapter = enrichmentSpy
 	var a adapters.Bidder = &Adapter{
-		endpoint: "http://test.com/openrtb2",
-		enricher: mockEnricher,
+		endpoint:   "http://test.com/openrtb2",
+		rtdAdapter: mockRtdAdapter,
 	}
 	var reqInfo adapters.ExtraRequestInfo
 
@@ -599,10 +707,27 @@ func TestSourceSanitization(t *testing.T) {
 	assert.Empty(t, err)
 
 	processedRequest := processedRequests[0]
-	processedRequestJSON := &openrtb2.BidRequest{}
-	json.Unmarshal(processedRequest.Body, processedRequestJSON)
-	assert.NotNil(t, processedRequestJSON.Source)
-	assert.Empty(t, processedRequestJSON.Source.Ext)
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
+
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			TagID: "1",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Source: &openrtb2.Source{},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+	assert.Equal(t, expectedRequest, bidRequest)
 }
 
 func TestOpenRTBEmptyResponse(t *testing.T) {

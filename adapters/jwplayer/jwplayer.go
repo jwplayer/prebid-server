@@ -13,8 +13,8 @@ import (
 )
 
 type Adapter struct {
-	endpoint string
-	enricher Enricher
+	endpoint   string
+	rtdAdapter RTDAdapter
 }
 
 type ExtraInfo struct {
@@ -30,6 +30,14 @@ type publisherExt struct {
 	JWPlayer jwplayerPublisher `json:"jwplayer,omitempty"`
 }
 
+const (
+	UnexpectedStatusCodeWarning          = "Unexpected status code:"
+	MissingFieldWarning                  = "The bid request is missing "
+	DebugSuggestion                      = "Run with request.debug = 1 for more info."
+	MissingDistributionChannelSuggestion = "Please populate either $.site or $.app."
+	MissingPublisherExtSuggestion        = "$.{site|app}.publisher.ext.jwplayer.publisherId is required."
+)
+
 // Builder builds a new instance of the JWPlayer adapter for the given bidder with the given config.
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
 	//configuration is consistent with default client cache config
@@ -43,16 +51,16 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters
 	}
 
 	extraInfo := ParseExtraInfo(config.ExtraAdapterInfo)
-	var enricher Enricher
-	enricher, enricherBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
+	var rtdAdapter RTDAdapter
+	rtdAdapter, rtdAdapterBuildError := buildContentTargeting(httpClient, extraInfo.TargetingEndpoint)
 
-	if enricherBuildError != nil {
-		fmt.Printf("Warning: a failure occured when building the Enricher: %s\n", enricherBuildError)
+	if rtdAdapterBuildError != nil {
+		fmt.Printf("Warning: a failure occured when building the RTDAdapter: %s\n", rtdAdapterBuildError)
 	}
 
 	bidder := &Adapter{
-		endpoint: config.Endpoint,
-		enricher: enricher,
+		endpoint:   config.Endpoint,
+		rtdAdapter: rtdAdapter,
 	}
 
 	return bidder, nil
@@ -104,7 +112,7 @@ func (a *Adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 
 	a.setXandrSChain(&requestCopy, publisherParams.PublisherId)
 
-	enrichmentFailure := a.enricher.EnrichRequest(&requestCopy, publisherParams.SiteId)
+	enrichmentFailure := a.rtdAdapter.EnrichRequest(&requestCopy, publisherParams.SiteId)
 	if enrichmentFailure != nil {
 		errors = append(errors, enrichmentFailure)
 	}
@@ -138,14 +146,14 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 
 	if responseData.StatusCode == http.StatusBadRequest {
 		err := &errortypes.BadInput{
-			Message: "Unexpected status code: 400. Bad request from publisher. Run with request.debug = 1 for more info.",
+			Message: fmt.Sprintf("%s 400. Bad request from publisher. %s", UnexpectedStatusCodeWarning, DebugSuggestion),
 		}
 		return nil, []error{err}
 	}
 
 	if responseData.StatusCode != http.StatusOK {
 		err := &errortypes.BadServerResponse{
-			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info.", responseData.StatusCode),
+			Message: fmt.Sprintf("%s %d. %s", UnexpectedStatusCodeWarning, responseData.StatusCode, DebugSuggestion),
 		}
 		return nil, []error{err}
 	}
@@ -195,13 +203,13 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
 func (a *Adapter) sanitizeDistributionChannels(site *openrtb2.Site, app *openrtb2.App) *errortypes.BadInput {
 	if site == nil && app == nil {
 		return &errortypes.BadInput{
-			Message: "The bid request did not contain a Site or App field. Please populate $.{site|app}.",
+			Message: fmt.Sprintf("The bid request did not contain a Site or App field. %s", MissingDistributionChannelSuggestion),
 		}
 	}
 
 	if site != nil && app != nil {
 		return &errortypes.BadInput{
-			Message: "Per oRTB 2.5, The bid request cannot contain both a Site and App field. Please populate either $.site or $.app.",
+			Message: fmt.Sprintf("Per oRTB 2.5, The bid request cannot contain both a Site and App field. %s", MissingDistributionChannelSuggestion),
 		}
 	}
 
@@ -232,7 +240,7 @@ func (a *Adapter) getPublisher(site *openrtb2.Site, app *openrtb2.App) (publishe
 
 	if publisher == nil {
 		err = &errortypes.BadInput{
-			Message: "The bid request did not contain a Publisher field. Please populate $.{site|app}.publisher .",
+			Message: MissingFieldWarning + "a Publisher field. " + MissingPublisherExtSuggestion,
 		}
 	}
 
@@ -248,12 +256,9 @@ func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 }
 
 func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPublisher, *errortypes.BadInput) {
-	warningMessage := "The bid request is missing "
-	guidanceMessage := "\n$.{site|app}.publisher.ext.jwplayer.publisherId is required."
-
 	if pubExt == nil {
 		return nil, &errortypes.BadInput{
-			Message: warningMessage + "publisher.ext" + guidanceMessage,
+			Message: MissingFieldWarning + "publisher.ext . " + MissingPublisherExtSuggestion,
 		}
 	}
 
@@ -266,7 +271,7 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 
 	if jwplayerPublisherExt.JWPlayer.PublisherId == "" {
 		return nil, &errortypes.BadInput{
-			Message: warningMessage + "publisher.ext.jwplayer.publisherId" + guidanceMessage,
+			Message: MissingFieldWarning + "publisher.ext.jwplayer.publisherId . " + MissingPublisherExtSuggestion,
 		}
 	}
 
