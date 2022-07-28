@@ -41,10 +41,6 @@ type TargetingData struct {
 	TargetingProfiles []string `json:"targeting_profiles"`
 }
 
-type RTDAdapter interface {
-	EnrichRequest(request *openrtb2.BidRequest, siteId string) EnrichmentFailed
-}
-
 type ContentTargeting struct {
 	httpClient       *http.Client
 	EndpointTemplate *template.Template
