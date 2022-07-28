@@ -189,7 +189,10 @@ func (a *Adapter) sanitizeImp(imp *openrtb2.Imp) *errortypes.BadInput {
 	}
 
 	placementId := params.PlacementId
-	imp.TagID = placementId
+	// Per Xandr, TagID should be the Placement Code (not to be confused with Placement ID)
+	// Since we are not using Placement Codes, it is best to remove any values that may create conflicts.
+	// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-ImpressionObject
+	imp.TagID = ""
 	// Per results obtained when testing the bid request to Xandr, imp.ext.Appnexus.placement_id is mandatory
 	imp.Ext = GetXandrImpExt(placementId)
 	if imp.Video == nil {
@@ -217,7 +220,7 @@ func (a *Adapter) sanitizeDistributionChannels(site *openrtb2.Site, app *openrtb
 
 	if site != nil {
 		// per Xandr doc, if set, this should equal the Xandr placement code.
-		// It is best to remove, since placement code is set to imp.TagID
+		// Since we are not using Placement Codes, it is best to remove any values that may create conflicts.
 		// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-SiteObjectSiteObject
 		site.ID = ""
 
@@ -252,7 +255,7 @@ func (a *Adapter) getPublisher(site *openrtb2.Site, app *openrtb2.App) (publishe
 func (a *Adapter) sanitizePublisher(publisher *openrtb2.Publisher) {
 	// per Xandr doc, if set, this should equal the Xandr publisher code.
 	// Used to set a default placement ID in the auction if tagid, site.id, or app.id are not provided.
-	// It is best to remove, since placement code is set to imp.TagID
+	// Since we are not using Placement Codes, it is best to remove any values that may create conflicts.
 	// https://docs.xandr.com/bundle/supply-partners/page/incoming-bid-request-from-ssps.html#IncomingBidRequestfromSSPs-PublisherObject
 	publisher.ID = ""
 }
