@@ -68,6 +68,7 @@ import (
 	"github.com/prebid/prebid-server/adapters/iqzone"
 	"github.com/prebid/prebid-server/adapters/ix"
 	"github.com/prebid/prebid-server/adapters/jixie"
+	"github.com/prebid/prebid-server/adapters/jwplayer"
 	"github.com/prebid/prebid-server/adapters/kayzen"
 	"github.com/prebid/prebid-server/adapters/kidoz"
 	"github.com/prebid/prebid-server/adapters/krushmedia"
@@ -118,10 +119,10 @@ import (
 	"github.com/prebid/prebid-server/adapters/unicorn"
 	"github.com/prebid/prebid-server/adapters/unruly"
 	"github.com/prebid/prebid-server/adapters/valueimpression"
+	"github.com/prebid/prebid-server/adapters/videobyte"
 	"github.com/prebid/prebid-server/adapters/visx"
 	"github.com/prebid/prebid-server/adapters/vrtcal"
 	"github.com/prebid/prebid-server/adapters/yahoossp"
-	"github.com/prebid/prebid-server/adapters/videobyte"
 	"github.com/prebid/prebid-server/adapters/yeahmobi"
 	"github.com/prebid/prebid-server/adapters/yieldlab"
 	"github.com/prebid/prebid-server/adapters/yieldmo"
@@ -201,6 +202,7 @@ func newAdapterBuilders() map[openrtb_ext.BidderName]adapters.Builder {
 		openrtb_ext.BidderIQZone:            iqzone.Builder,
 		openrtb_ext.BidderIx:                ix.Builder,
 		openrtb_ext.BidderJixie:             jixie.Builder,
+		openrtb_ext.BidderJWPlayer:          jwplayer.Builder,
 		openrtb_ext.BidderKayzen:            kayzen.Builder,
 		openrtb_ext.BidderKidoz:             kidoz.Builder,
 		openrtb_ext.BidderKrushmedia:        krushmedia.Builder,
