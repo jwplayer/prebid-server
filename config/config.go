@@ -808,7 +808,7 @@ func SetupViper(v *viper.Viper, filename string) {
 	v.SetDefault("adapters.interactiveoffers.endpoint", "https://prebid-server.ioadx.com/bidRequest/?partnerId={{.AccountID}}")
 	v.SetDefault("adapters.ix.disabled", true)
 	v.SetDefault("adapters.jixie.endpoint", "https://hb.jixie.io/v2/hbsvrpost")
-	v.SetDefault("adapters.jwplayer.endpoint", "https://ib.adnxs.com/openrtb2/prebid")
+	v.SetDefault("adapters.jwplayer.endpoint", "http://jwplayer-useast.adnxs.com/openrtb2?member_id=12564")
 	v.SetDefault("adapters.jwplayer.extra_info", "{\"targeting_endpoint\": \"https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url={{.MediaUrl}}&title={{.Title}}&description={{.Description}}\"}")
 	v.SetDefault("adapters.kayzen.endpoint", "https://bids-{{.ZoneID}}.bidder.kayzen.io/?exchange={{.AccountID}}")
 	v.SetDefault("adapters.krushmedia.endpoint", "http://ads4.krushmedia.com/?c=rtb&m=req&key={{.AccountID}}")
