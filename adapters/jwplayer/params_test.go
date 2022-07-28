@@ -41,7 +41,6 @@ func getValidator(t *testing.T) openrtb_ext.BidderParamValidator {
 
 var validParams = []string{
 	`{"placementId": "123"}`,
-	`{"placementId": "123", "publisherId": "abc"}`,
 }
 
 var invalidParams = []string{
