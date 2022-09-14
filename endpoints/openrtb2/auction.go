@@ -1844,6 +1844,10 @@ func writeError(errs []error, w http.ResponseWriter, labels *metrics.Labels, req
 				httpStatus = http.StatusServiceUnavailable
 				metricsStatus = metrics.RequestStatusBlacklisted
 				break
+			} else if erVal == errortypes.MalformedAcctErrorCode {
+				httpStatus = http.StatusInternalServerError
+				metricsStatus = metrics.RequestStatusAccountConfigErr
+				break
 			}
 		}
 		w.WriteHeader(httpStatus)
