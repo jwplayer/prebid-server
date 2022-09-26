@@ -3,7 +3,7 @@ package jwplayer
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/config"
 	"github.com/prebid/prebid-server/errortypes"
@@ -284,19 +284,19 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 }
 
 func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId string) {
-	publisherSChain := GetPublisherSChain25(request.Source)
-	// We support request in the oRTB 2.5 format, whereas Xandr supports 2.4
-	// We discard the publisher's 2.5 schain to avoid the risk of confusion down the line for Xandr
-	a.clearPublisherSChain25(request.Source)
+	publisherSChain := GetPublisherSChain26(request.Source)
+	// We support request in the oRTB 2.6 format, whereas Xandr supports 2.4
+	// We discard the publisher's 2.6 schain to avoid the risk of confusion down the line for Xandr
+	a.clearPublisherSChain26(request.Source)
 	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
 	request.Ext = GetXandrRequestExt(sChain)
 }
 
-func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
+func (a *Adapter) clearPublisherSChain26(source *openrtb2.Source) {
 	if source == nil {
 		return
 	}
-	source.Ext = nil
+	source.SChain = nil
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
