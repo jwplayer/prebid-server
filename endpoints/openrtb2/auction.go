@@ -151,8 +151,8 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 
 	w.Header().Set("X-Prebid", version.BuildXPrebidHeader(version.Ver))
 
-	req, impExtInfoMap, storedAuctionResponses, storedBidResponses, bidderImpReplaceImp, errL := deps.parseRequest(r)
-	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels) {
+	req, impExtInfoMap, storedAuctionResponses, storedBidResponses, bidderImpReplaceImp, errL, requestJson := deps.parseRequest(r)
+	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels, requestJson) {
 		return
 	}
 
@@ -192,7 +192,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	err := deps.setIntegrationType(req, account)
 	if err != nil {
 		errL = append(errL, err)
-		writeError(errL, w, &labels)
+		writeError(errL, w, &labels, requestJson)
 		return
 	}
 	secGPC := r.Header.Get("Sec-GPC")
@@ -220,7 +220,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	ao.Account = account
 	if err != nil {
 		if errortypes.ReadCode(err) == errortypes.BadInputErrorCode {
-			writeError([]error{err}, w, &labels)
+			writeError([]error{err}, w, &labels, requestJson)
 			return
 		}
 		labels.RequestStatus = metrics.RequestStatusErr
@@ -257,7 +257,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 // possible, it will return errors with messages that suggest improvements.
 //
 // If the errors list has at least one element, then no guarantees are made about the returned request.
-func (deps *endpointDeps) parseRequest(httpRequest *http.Request) (req *openrtb_ext.RequestWrapper, impExtInfoMap map[string]exchange.ImpExtInfo, storedAuctionResponses stored_responses.ImpsWithBidResponses, storedBidResponses stored_responses.ImpBidderStoredResp, bidderImpReplaceImpId stored_responses.BidderImpReplaceImpID, errs []error) {
+func (deps *endpointDeps) parseRequest(httpRequest *http.Request) (req *openrtb_ext.RequestWrapper, impExtInfoMap map[string]exchange.ImpExtInfo, storedAuctionResponses stored_responses.ImpsWithBidResponses, storedBidResponses stored_responses.ImpBidderStoredResp, bidderImpReplaceImpId stored_responses.BidderImpReplaceImpID, errs []error, requestJson []byte) {
 	req = &openrtb_ext.RequestWrapper{}
 	req.BidRequest = &openrtb2.BidRequest{}
 	errs = nil
@@ -286,7 +286,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request) (req *openrtb_
 
 	impInfo, errs := parseImpInfo(requestJson)
 	if len(errs) > 0 {
-		return nil, nil, nil, nil, nil, errs
+		return nil, nil, nil, nil, nil, errs, requestJson
 	}
 
 	// Fetch the Stored Request data and merge it into the HTTP request.
@@ -297,7 +297,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request) (req *openrtb_
 	//Stored auction responses should be processed after stored requests due to possible impression modification
 	storedAuctionResponses, storedBidResponses, bidderImpReplaceImpId, errs = stored_responses.ProcessStoredResponses(ctx, requestJson, deps.storedRespFetcher, deps.bidderMap)
 	if len(errs) > 0 {
-		return nil, nil, nil, nil, nil, errs
+		return nil, nil, nil, nil, nil, errs, requestJson
 	}
 
 	if err := json.Unmarshal(requestJson, req.BidRequest); err != nil {
