@@ -2,6 +2,7 @@ package jwplayer
 
 import (
 	"encoding/json"
+	"github.com/mxmCherry/openrtb/v16/adcom1"
 	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -18,14 +19,14 @@ func TestSetXandrVideoExt(t *testing.T) {
 	SetXandrVideoExt(video)
 	assert.Empty(t, video.Ext)
 
-	video.Placement = openrtb2.VideoPlacementTypeInArticle
+	video.Placement = adcom1.VideoInArticle
 	SetXandrVideoExt(video)
 	expectedVideoExt := json.RawMessage(`{"appnexus":{"context":4}}`)
 	assert.Equal(t, expectedVideoExt, video.Ext)
 
 	video.Ext = nil
-	video.Placement = openrtb2.VideoPlacementTypeInStream
-	video.StartDelay = openrtb2.StartDelayGenericPostRoll.Ptr()
+	video.Placement = adcom1.VideoInStream
+	video.StartDelay = adcom1.StartPostRoll.Ptr()
 	SetXandrVideoExt(video)
 	expectedVideoExt = json.RawMessage(`{"appnexus":{"context":3}}`)
 	assert.Equal(t, expectedVideoExt, video.Ext)
@@ -35,19 +36,19 @@ func TestGetXandrContext(t *testing.T) {
 	video := openrtb2.Video{}
 	assert.Equal(t, Unknown, GetXandrContext(video))
 
-	video.Placement = openrtb2.VideoPlacementTypeInBanner
-	video.StartDelay = openrtb2.StartDelayPreRoll.Ptr()
+	video.Placement = adcom1.VideoInBanner
+	video.StartDelay = adcom1.StartPreRoll.Ptr()
 	assert.Equal(t, Outstream, GetXandrContext(video))
 
-	video.Placement = openrtb2.VideoPlacementTypeInStream
+	video.Placement = adcom1.VideoInStream
 	assert.Equal(t, PreRoll, GetXandrContext(video))
 }
 
 func TestGetXandrContextFromStartdelay(t *testing.T) {
-	assert.Equal(t, PreRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayPreRoll))
-	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayGenericMidRoll))
-	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(openrtb2.StartDelay(5)))
-	assert.Equal(t, PostRoll, GetXandrContextFromStartdelay(openrtb2.StartDelayGenericPostRoll))
+	assert.Equal(t, PreRoll, GetXandrContextFromStartdelay(adcom1.StartPreRoll))
+	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(adcom1.StartMidRoll))
+	assert.Equal(t, MidRoll, GetXandrContextFromStartdelay(adcom1.StartDelay(5)))
+	assert.Equal(t, PostRoll, GetXandrContextFromStartdelay(adcom1.StartPostRoll))
 }
 
 func TestConvertToXandrKeywords(t *testing.T) {
