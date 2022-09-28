@@ -245,7 +245,7 @@ func TestImpVideoExt(t *testing.T) {
 
 	assert.Equal(t, expectedRequest, bidRequest)
 
-	rawRequest.Imp[0].Video.Placement = adcom1.VideoInFeed
+	rawRequest.Imp[0].Video.Placement = adcom1.VideoInStream
 	rawRequest.Imp[0].Video.StartDelay = adcom1.StartDelay(10).Ptr()
 	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
@@ -259,7 +259,7 @@ func TestImpVideoExt(t *testing.T) {
 			Video: &openrtb2.Video{
 				H:          250,
 				W:          350,
-				Placement:  adcom1.VideoInFeed,
+				Placement:  adcom1.VideoInStream,
 				StartDelay: adcom1.StartDelay(10).Ptr(),
 				Ext:        json.RawMessage(`{"appnexus":{"context":2}}`),
 			},
@@ -565,7 +565,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	sourceExt := &openrtb2.Source{
+	source := &openrtb2.Source{
 		SChain: &openrtb2.SupplyChain{
 			Complete: 0,
 			Ver:      "2.0",
@@ -578,8 +578,6 @@ func TestAppendingToExistingSchain(t *testing.T) {
 		},
 	}
 
-	sourceExtJSON, _ := json.Marshal(sourceExt)
-
 	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
 		Imp: []openrtb2.Imp{{
@@ -591,9 +589,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		Source: &openrtb2.Source{
-			Ext: sourceExtJSON,
-		},
+		Source: source,
 	}
 
 	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
@@ -688,9 +684,7 @@ func TestSourceSanitization(t *testing.T) {
 				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		Source: &openrtb2.Source{
-			Ext: json.RawMessage(`{}`),
-		},
+		Source: &openrtb2.Source{},
 	}
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)

@@ -2,6 +2,7 @@ package jwplayer
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/errortypes"
@@ -110,12 +111,6 @@ func GetPublisherSChain26(source *openrtb2.Source) *openrtb2.SupplyChain {
 	if source == nil {
 		return nil
 	}
-	/*
-
-	var sourceExt openrtb_ext.SourceExt
-	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
-		return nil
-	}*/
 
 	if source.SChain == nil {
 		return nil
