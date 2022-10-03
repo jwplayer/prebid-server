@@ -1,12 +1,13 @@
 package jwplayer
 
 import (
-	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/mxmCherry/openrtb/v16/openrtb2"
+	"github.com/mxmCherry/openrtb/v16/adcom1"
 	"net/url"
 )
 
-func IsInstream(placementType openrtb2.VideoPlacementType) bool {
-	return placementType == openrtb2.VideoPlacementTypeInStream
+func IsInstream(placementType adcom1.VideoPlacementSubtype) bool {
+	return placementType == adcom1.VideoInStream
 }
 
 func IsValidMediaUrl(rawUrl string) bool {
