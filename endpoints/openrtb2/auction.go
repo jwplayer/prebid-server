@@ -220,7 +220,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	ao.Account = account
 	if err != nil {
 		if errortypes.ReadCode(err) == errortypes.BadInputErrorCode {
-			writeError([]error{err}, w, &labels)
+			writeError([]error{err}, w, &labels, requestJson)
 			return
 		}
 		labels.RequestStatus = metrics.RequestStatusErr
@@ -297,7 +297,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request) (req *openrtb_
 	//Stored auction responses should be processed after stored requests due to possible impression modification
 	storedAuctionResponses, storedBidResponses, bidderImpReplaceImpId, errs = stored_responses.ProcessStoredResponses(ctx, requestJson, deps.storedRespFetcher, deps.bidderMap)
 	if len(errs) > 0 {
-		return nil, nil, nil, nil, nil, errs
+		return nil, nil, nil, nil, nil, errs, requestJson
 	}
 
 	if err := json.Unmarshal(requestJson, req.BidRequest); err != nil {
