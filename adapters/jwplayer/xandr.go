@@ -2,8 +2,8 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"github.com/mxmCherry/openrtb/v15/openrtb2"
-	"github.com/prebid/prebid-server/openrtb_ext"
+	"github.com/mxmCherry/openrtb/v16/adcom1"
+	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"strconv"
 	"strings"
 )
@@ -86,17 +86,17 @@ func GetXandrContext(video openrtb2.Video) xandrContext {
 	return GetXandrContextFromStartdelay(*video.StartDelay)
 }
 
-func GetXandrContextFromStartdelay(startDelay openrtb2.StartDelay) xandrContext {
+func GetXandrContextFromStartdelay(startDelay adcom1.StartDelay) xandrContext {
 	if startDelay > 0 {
 		return MidRoll // startdelay > 0 indicates ad position in seconds
 	}
 
 	switch startDelay {
-	case openrtb2.StartDelayPreRoll:
+	case adcom1.StartPreRoll:
 		return PreRoll
-	case openrtb2.StartDelayGenericMidRoll:
+	case adcom1.StartMidRoll:
 		return MidRoll
-	case openrtb2.StartDelayGenericPostRoll:
+	case adcom1.StartPostRoll:
 		return PostRoll
 	}
 
@@ -128,7 +128,7 @@ func ConvertToXandrKeywords(jwpsegs []string) string {
 	return keyword
 }
 
-func GetXandrRequestExt(schain openrtb_ext.ExtRequestPrebidSChainSChain) json.RawMessage {
+func GetXandrRequestExt(schain openrtb2.SupplyChain) json.RawMessage {
 	// Xandr expects the SChain to be in accordance with oRTB 2.4
 	// $.ext.schain
 	requestExtension := requestExt{
