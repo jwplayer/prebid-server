@@ -278,7 +278,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	rejectErr, isRejectErr := hookexecution.CastRejectErr(err)
 	if err != nil && !isRejectErr {
 		if errortypes.ReadCode(err) == errortypes.BadInputErrorCode {
-			writeError([]error{err}, w, &labels)
+			writeError([]error{err}, w, &labels, requestJson)
 			return
 		}
 		labels.RequestStatus = metrics.RequestStatusErr
