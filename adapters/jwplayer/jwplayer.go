@@ -296,7 +296,7 @@ func (a *Adapter) clearPublisherSChain26(source *openrtb2.Source) {
 	if source == nil {
 		return
 	}
-	source.Ext = nil
+	source.SChain = nil
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {

@@ -3,6 +3,7 @@ package jwplayer
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/mxmCherry/openrtb/v16/adcom1"
 	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/errortypes"
@@ -212,7 +213,7 @@ func TestImpVideoExt(t *testing.T) {
 
 	assert.Equal(t, expectedRequest, bidRequest)
 
-	rawRequest.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInFeed
+	rawRequest.Imp[0].Video.Placement = adcom1.VideoInFeed
 	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
@@ -228,7 +229,7 @@ func TestImpVideoExt(t *testing.T) {
 			Video: &openrtb2.Video{
 				H:         250,
 				W:         350,
-				Placement: openrtb2.VideoPlacementTypeInFeed,
+				Placement: adcom1.VideoInFeed,
 				Ext:       json.RawMessage(`{"appnexus":{"context":4}}`),
 			},
 			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
@@ -244,8 +245,8 @@ func TestImpVideoExt(t *testing.T) {
 
 	assert.Equal(t, expectedRequest, bidRequest)
 
-	rawRequest.Imp[0].Video.Placement = openrtb2.VideoPlacementTypeInStream
-	rawRequest.Imp[0].Video.StartDelay = openrtb2.StartDelay(10).Ptr()
+	rawRequest.Imp[0].Video.Placement = adcom1.VideoInStream
+	rawRequest.Imp[0].Video.StartDelay = adcom1.StartDelay(10).Ptr()
 	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	processedRequest = processedRequests[0]
@@ -258,8 +259,8 @@ func TestImpVideoExt(t *testing.T) {
 			Video: &openrtb2.Video{
 				H:          250,
 				W:          350,
-				Placement:  openrtb2.VideoPlacementTypeInStream,
-				StartDelay: openrtb2.StartDelay(10).Ptr(),
+				Placement:  adcom1.VideoInStream,
+				StartDelay: adcom1.StartDelay(10).Ptr(),
 				Ext:        json.RawMessage(`{"appnexus":{"context":2}}`),
 			},
 			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
@@ -564,20 +565,18 @@ func TestAppendingToExistingSchain(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
-	sourceExt := &openrtb_ext.SourceExt{
-		SChain: openrtb_ext.ExtRequestPrebidSChainSChain{
+	source := &openrtb2.Source{
+		SChain: &openrtb2.SupplyChain{
 			Complete: 0,
 			Ver:      "2.0",
-			Nodes: []*openrtb_ext.ExtRequestPrebidSChainSChainNode{{
+			Nodes: []openrtb2.SupplyChainNode{{
 				ASI: "publisher.com",
 				SID: "some id",
 				RID: "some req id",
-				HP:  0,
+				HP:  openrtb2.Int8Ptr(0),
 			}},
 		},
 	}
-
-	sourceExtJSON, _ := json.Marshal(sourceExt)
 
 	rawRequest := &openrtb2.BidRequest{
 		ID: "test_id",
@@ -590,9 +589,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		Source: &openrtb2.Source{
-			Ext: sourceExtJSON,
-		},
+		Source: source,
 	}
 
 	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
@@ -687,9 +684,7 @@ func TestSourceSanitization(t *testing.T) {
 				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		Source: &openrtb2.Source{
-			Ext: json.RawMessage(`{}`),
-		},
+		Source: &openrtb2.Source{},
 	}
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)

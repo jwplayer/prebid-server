@@ -90,7 +90,7 @@ type requestExt struct {
 func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb2.SupplyChain) openrtb2.SupplyChain {
 	node := MakeSChainNode(publisherId, requestId)
 	var isComplete int8 = 1
-	var nodes []openrtb2.SupplyChain
+	var nodes []openrtb2.SupplyChainNode
 	if publisherSChain != nil {
 		isComplete = publisherSChain.Complete
 		nodes = publisherSChain.Nodes
@@ -106,21 +106,18 @@ func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb2.
 }
 
 // GetPublisherSChain26 Get the SChain from the 2.6 oRTB spec
-func GetPublisherSChain26(source *openrtb2.Source) openrtb2.SupplyChain {
+func GetPublisherSChain26(source *openrtb2.Source) *openrtb2.SupplyChain {
 	if source == nil {
 		return nil
 	}
 
-	var sourceExt openrtb_ext.SourceExt
-	if err := json.Unmarshal(source.Ext, &sourceExt); err != nil {
+	if source.SChain == nil {
 		return nil
 	}
 
-	if sourceExt.SChain.Nodes == nil {
-		return nil
-	}
+	schain := *source.SChain
 
-	return &sourceExt.SChain
+	return &schain
 }
 
 func MakeSChainNode(publisherId string, requestId string) openrtb2.SupplyChainNode {
