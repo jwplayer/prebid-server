@@ -1,18 +1,18 @@
 package jwplayer
 
 import (
-	"github.com/mxmCherry/openrtb/v16/openrtb2"
+	"github.com/mxmCherry/openrtb/v16/adcom1"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestIsInstream(t *testing.T) {
-	assert.True(t, IsInstream(openrtb2.VideoPlacementTypeInStream))
+	assert.True(t, IsInstream(adcom1.VideoInStream))
 
-	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInBanner))
-	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInArticle))
-	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInFeed))
-	assert.False(t, IsInstream(openrtb2.VideoPlacementTypeInterstitialSliderFloating))
+	assert.False(t, IsInstream(adcom1.VideoInBanner))
+	assert.False(t, IsInstream(adcom1.VideoInArticle))
+	assert.False(t, IsInstream(adcom1.VideoInFeed))
+	assert.False(t, IsInstream(adcom1.VideoAlwaysVisible))
 }
 
 func TestIsValidMediaUrl(t *testing.T) {
