@@ -2,7 +2,7 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/mxmCherry/openrtb/v16/openrtb2"
 	"github.com/prebid/prebid-server/adapters"
 	"github.com/prebid/prebid-server/errortypes"
 	"github.com/prebid/prebid-server/openrtb_ext"
@@ -84,29 +84,29 @@ func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
 }
 
 type requestExt struct {
-	SChain openrtb_ext.ExtRequestPrebidSChainSChain `json:"schain"`
+	SChain openrtb2.SupplyChain `json:"schain"`
 }
 
-func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb_ext.ExtRequestPrebidSChainSChain) openrtb_ext.ExtRequestPrebidSChainSChain {
+func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb2.SupplyChain) openrtb2.SupplyChain {
 	node := MakeSChainNode(publisherId, requestId)
-	isComplete := 1
-	var nodes []*openrtb_ext.ExtRequestPrebidSChainSChainNode
+	var isComplete int8 = 1
+	var nodes []openrtb2.SupplyChain
 	if publisherSChain != nil {
 		isComplete = publisherSChain.Complete
 		nodes = publisherSChain.Nodes
 	}
 
-	nodes = append(nodes, &node)
+	nodes = append(nodes, node)
 
-	return openrtb_ext.ExtRequestPrebidSChainSChain{
+	return openrtb2.SupplyChain{
 		Ver:      "1.0",
 		Complete: isComplete,
 		Nodes:    nodes,
 	}
 }
 
-// GetPublisherSChain25 Get the SChain from the 2.5 oRTB spec
-func GetPublisherSChain25(source *openrtb2.Source) *openrtb_ext.ExtRequestPrebidSChainSChain {
+// GetPublisherSChain26 Get the SChain from the 2.6 oRTB spec
+func GetPublisherSChain26(source *openrtb2.Source) openrtb2.SupplyChain {
 	if source == nil {
 		return nil
 	}
@@ -123,11 +123,11 @@ func GetPublisherSChain25(source *openrtb2.Source) *openrtb_ext.ExtRequestPrebid
 	return &sourceExt.SChain
 }
 
-func MakeSChainNode(publisherId string, requestId string) openrtb_ext.ExtRequestPrebidSChainSChainNode {
-	return openrtb_ext.ExtRequestPrebidSChainSChainNode{
+func MakeSChainNode(publisherId string, requestId string) openrtb2.SupplyChainNode {
+	return openrtb2.SupplyChainNode{
 		ASI: jwplayerDomain,
 		SID: publisherId,
 		RID: requestId,
-		HP:  1,
+		HP:  openrtb2.Int8Ptr(1),
 	}
 }
