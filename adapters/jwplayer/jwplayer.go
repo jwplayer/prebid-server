@@ -312,13 +312,13 @@ func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (suggestions []error) {
 	if device := request.Device; device != nil {
 		if device.IP == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.device.ip",
 			})
 		}
 
 		if device.IFA == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.device.ifa",
 			})
 		}
@@ -328,49 +328,49 @@ func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (s
 	const userIdFieldName = "$.user.id"
 	if user := request.User; user != nil {
 		if user.BuyerUID == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + buyerUserIdFieldName,
 			})
 		}
 
 		if user.ID == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + userIdFieldName,
 			})
 		}
 	} else {
-		suggestions = append(suggestions, &errortypes.MissingInput{
+		suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 			Message: TroubleshootingPrefix + buyerUserIdFieldName + " and " + userIdFieldName,
 		})
 	}
 
 	if site := request.Site; site != nil {
 		if site.Ref == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.ref",
 			})
 		}
 
 		if site.Domain == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.domain",
 			})
 		}
 
 		if site.Page == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.page",
 			})
 		}
 	} else if app := request.App; app != nil {
 		if app.Domain == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.app.domain",
 			})
 		}
 
 		if app.Bundle == "" {
-			suggestions = append(suggestions, &errortypes.MissingInput{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.app.bundle",
 			})
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mxmCherry/openrtb/v15/openrtb2"
+	"github.com/prebid/prebid-server/errortypes"
 	"net/http"
 	"text/template"
 )
@@ -27,7 +28,7 @@ type DataExt struct {
 
 type TargetingOutcome struct {
 	response *TargetingResponse
-	error    *Warning
+	error    *errortypes.TroubleShootingSuggestion
 }
 
 type TargetingResponse struct {
@@ -46,13 +47,12 @@ type ContentTargeting struct {
 	EndpointTemplate *template.Template
 }
 
-func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTargeting, *Warning) {
+func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTargeting, *errortypes.TroubleShootingSuggestion) {
 	template, parseError := template.New("targetingEndpointTemplate").Parse(endpoint)
-	var buildError *Warning = nil
+	var buildError *errortypes.TroubleShootingSuggestion = nil
 	if parseError != nil {
-		buildError = &Warning{
+		buildError = &errortypes.TroubleShootingSuggestion{
 			Message: fmt.Sprintf("Unable to parse targeting url template: %v", parseError),
-			code:    EndpointTemplateErrorCode,
 		}
 	}
 
@@ -62,7 +62,7 @@ func buildContentTargeting(httpClient *http.Client, endpoint string) (*ContentTa
 	}, buildError
 }
 
-func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) *Warning {
+func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId string) *errortypes.TroubleShootingSuggestion {
 	if site := request.Site; site != nil {
 		return ct.enrichFields(&site.Keywords, site.Content, siteId)
 	}
@@ -71,17 +71,15 @@ func (ct *ContentTargeting) EnrichRequest(request *openrtb2.BidRequest, siteId s
 		return ct.enrichFields(&app.Keywords, app.Content, siteId)
 	}
 
-	return &Warning{
+	return &errortypes.TroubleShootingSuggestion{
 		Message: "Missing request.{site|app}",
-		code:    MissingDistributionChannelErrorCode,
 	}
 }
 
-func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *Warning {
+func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Content, siteId string) *errortypes.TroubleShootingSuggestion {
 	if content == nil {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Missing request.{site|app}.content",
-			code:    MissingContentBlockErrorCode,
 		}
 	}
 
@@ -92,32 +90,28 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	}
 
 	if siteId == "" {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Missing publisher.ext.jwplayer.SiteId",
-			code:    MissingSiteIdErrorCode,
 		}
 	}
 
 	if ct.EndpointTemplate == nil {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Empty template",
-			code:    EmptyTemplateErrorCode,
 		}
 	}
 
 	metadata := ParseContentMetadata(*content)
 	if IsValidMediaUrl(metadata.Url) == false {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Invalid Media Url",
-			code:    MissingMediaUrlErrorCode,
 		}
 	}
 
 	targetingUrl := BuildTargetingEndpoint(ct.EndpointTemplate, siteId, metadata)
 	if targetingUrl == "" {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Failed to build the targeting Url",
-			code:    TargetingUrlErrorCode,
 		}
 	}
 
@@ -140,9 +134,8 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	targetingResponse := targetingOutcome.response
 	jwpsegs = GetAllJwpsegs(targetingResponse.Data)
 	if len(jwpsegs) == 0 {
-		return &Warning{
+		return &errortypes.TroubleShootingSuggestion{
 			Message: "Empty Targeting Segments",
-			code:    EmptyTargetingSegmentsErrorCode,
 		}
 	}
 
@@ -154,28 +147,25 @@ func (ct *ContentTargeting) enrichFields(keywords *string, content *openrtb2.Con
 	return nil
 }
 
-func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *Warning) {
+func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *errortypes.TroubleShootingSuggestion) {
 	httpReq, newReqErr := http.NewRequest("GET", targetingUrl, nil)
 	if newReqErr != nil {
-		return nil, &Warning{
+		return nil, &errortypes.TroubleShootingSuggestion{
 			Message: fmt.Sprintf("Failed to instantiate request: %s", newReqErr.Error()),
-			code:    HttpRequestInstantiationErrorCode,
 		}
 	}
 
 	resp, reqFail := ct.httpClient.Do(httpReq)
 	if reqFail != nil {
-		return nil, &Warning{
+		return nil, &errortypes.TroubleShootingSuggestion{
 			Message: fmt.Sprintf("Request Execution failure: %s", reqFail.Error()),
-			code:    HttpRequestExecutionErrorCode,
 		}
 	}
 
 	statusCode := resp.StatusCode
 	if statusCode != http.StatusOK {
-		return nil, &Warning{
+		return nil, &errortypes.TroubleShootingSuggestion{
 			Message: fmt.Sprintf("Server responded with failure status: %d.", statusCode),
-			code:    BaseNetworkErrorCode + statusCode,
 		}
 	}
 
@@ -183,9 +173,8 @@ func (ct *ContentTargeting) fetch(targetingUrl string) (*TargetingResponse, *War
 
 	targetingResponse := TargetingResponse{}
 	if error := json.NewDecoder(resp.Body).Decode(&targetingResponse); error != nil {
-		return nil, &Warning{
+		return nil, &errortypes.TroubleShootingSuggestion{
 			Message: fmt.Sprintf("Failed to decode targeting response: %s", error.Error()),
-			code:    BaseDecodingErrorCode,
 		}
 	}
 
