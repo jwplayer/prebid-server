@@ -3,6 +3,7 @@ package jwplayer
 import (
 	"encoding/json"
 	"github.com/mxmCherry/openrtb/v16/openrtb2"
+	"github.com/prebid/prebid-server/errortypes"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -222,7 +223,7 @@ func TestMissingDistributionChannel(t *testing.T) {
 	}
 
 	enrichmentFailure := enricher.EnrichRequest(request, "testSiteId")
-	assert.Equal(t, MissingDistributionChannelErrorCode, enrichmentFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, enrichmentFailure.Code())
 }
 
 func TestMissingContent(t *testing.T) {
@@ -263,7 +264,7 @@ func TestMissingContent(t *testing.T) {
 	}
 
 	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
-	assert.Equal(t, MissingContentBlockErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 	assert.Equal(t, expectedRequest, request)
 }
 
@@ -318,7 +319,7 @@ func TestDecodeError(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, BaseDecodingErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestNetworkError(t *testing.T) {
@@ -371,7 +372,7 @@ func TestNetworkError(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, BaseNetworkErrorCode+433, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestMissingEndpoint(t *testing.T) {
@@ -422,7 +423,7 @@ func TestMissingEndpoint(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testSiteId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, TargetingUrlErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestRequestAlreadyHasSegments(t *testing.T) {
@@ -571,7 +572,7 @@ func TestMissingSiteId(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, MissingSiteIdErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestMissingTemplate(t *testing.T) {
@@ -616,7 +617,7 @@ func TestMissingTemplate(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, EmptyTemplateErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestMissingContentUrl(t *testing.T) {
@@ -662,7 +663,7 @@ func TestMissingContentUrl(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, MissingMediaUrlErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func Test404(t *testing.T) {
@@ -712,7 +713,7 @@ func Test404(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, BaseNetworkErrorCode+404, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
 
 func TestEmptySegments(t *testing.T) {
@@ -763,5 +764,5 @@ func TestEmptySegments(t *testing.T) {
 
 	targetingFailure := enricher.EnrichRequest(request, "testId")
 	assert.Equal(t, expectedRequest, request)
-	assert.Equal(t, EmptyTargetingSegmentsErrorCode, targetingFailure.Code())
+	assert.Equal(t, errortypes.TroubleShootingSuggestionWarningCode, targetingFailure.Code())
 }
