@@ -5,7 +5,7 @@ import "github.com/prebid/prebid-server/errortypes"
 const (
 	MissingDistributionChannelErrorCode = 300001
 	EndpointTemplateErrorCode           = 301001
-	MissingContentBlockErrorCode        = 302001
+	MissingContentBlockErrorCode        = iota + 302001
 	MissingSiteIdErrorCode
 	MissingMediaUrlErrorCode
 	EmptyTemplateErrorCode
@@ -15,16 +15,6 @@ const (
 	HttpRequestExecutionErrorCode     = 303050
 	BaseNetworkErrorCode              = 304000
 	BaseDecodingErrorCode             = 305000
-	TroubleShootingDeviceIPErrorCode  = 400001
-	TroubleShootingDeviceIFAErrorCode
-	TroubleShootingUserErrorCode
-	TroubleShootingUserIdErrorCode
-	TroubleShootingBuyerUIdErrorCode
-	TroubleShootingSiteRefErrorCode
-	TroubleShootingSiteDomainErrorCode
-	TroubleShootingSitePageErrorCode
-	TroubleShootingAppDomainErrorCode
-	TroubleShootingAppBundleErrorCode
 )
 
 type Warning struct {
