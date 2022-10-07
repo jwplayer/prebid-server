@@ -26,7 +26,6 @@ const (
 	InvalidPrivacyConsentWarningCode = iota + 10000
 	AccountLevelDebugDisabledWarningCode
 	BidderLevelDebugDisabledWarningCode
-	MissingInputWarningCode
 	DisabledCurrencyConversionWarningCode
 	AlternateBidderCodeWarningCode
 	MultiBidWarningCode
@@ -38,6 +37,7 @@ const (
 	SecBrowsingTopicsWarningCode
 	InvalidUserEIDsWarningCode
 	InvalidUserUIDsWarningCode
+	TroubleShootingSuggestionWarningCode
 )
 
 // Coder provides an error or warning code with severity.
