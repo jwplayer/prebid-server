@@ -196,6 +196,22 @@ func (err *MalformedAcct) Severity() Severity {
 	return SeverityFatal
 }
 
+type MissingInput struct {
+	Message string
+}
+
+func (err *MissingInput) Error() string {
+	return err.Message
+}
+
+func (err *MissingInput) Code() int {
+	return MissingInputWarningCode
+}
+
+func (err *MissingInput) Severity() Severity {
+	return SeverityWarning
+}
+
 // Warning is a generic non-fatal error. Throughout the codebase, an error can
 // only be a warning if it's of the type defined below
 type Warning struct {

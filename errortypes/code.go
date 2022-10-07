@@ -26,6 +26,7 @@ const (
 	InvalidPrivacyConsentWarningCode = iota + 10000
 	AccountLevelDebugDisabledWarningCode
 	BidderLevelDebugDisabledWarningCode
+	MissingInputWarningCode
 	DisabledCurrencyConversionWarningCode
 	AlternateBidderCodeWarningCode
 	MultiBidWarningCode

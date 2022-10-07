@@ -902,6 +902,8 @@ func errorsToMetric(errs []error) map[metrics.AdapterError]struct{} {
 			ret[metrics.AdapterErrorValidation] = s
 		case errortypes.TmaxTimeoutErrorCode:
 			ret[metrics.AdapterErrorTmaxTimeout] = s
+		case errortypes.MissingInputWarningCode:
+			// do nothing
 		default:
 			ret[metrics.AdapterErrorUnknown] = s
 		}
