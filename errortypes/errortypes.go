@@ -196,19 +196,19 @@ func (err *MalformedAcct) Severity() Severity {
 	return SeverityFatal
 }
 
-type MissingInput struct {
+type TroubleShootingSuggestion struct {
 	Message string
 }
 
-func (err *MissingInput) Error() string {
+func (err *TroubleShootingSuggestion) Error() string {
 	return err.Message
 }
 
-func (err *MissingInput) Code() int {
-	return MissingInputWarningCode
+func (err *TroubleShootingSuggestion) Code() int {
+	return TroubleShootingSuggestionWarningCode
 }
 
-func (err *MissingInput) Severity() Severity {
+func (err *TroubleShootingSuggestion) Severity() Severity {
 	return SeverityWarning
 }
 
