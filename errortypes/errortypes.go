@@ -165,6 +165,22 @@ func (err *BidderTemporarilyDisabled) Severity() Severity {
 	return SeverityWarning
 }
 
+type MissingInput struct {
+	Message string
+}
+
+func (err *MissingInput) Error() string {
+	return err.Message
+}
+
+func (err *MissingInput) Code() int {
+	return MissingInputWarningCode
+}
+
+func (err *MissingInput) Severity() Severity {
+	return SeverityWarning
+}
+
 // Warning is a generic non-fatal error.
 type Warning struct {
 	Message     string
