@@ -552,6 +552,8 @@ func errorsToMetric(errs []error) map[metrics.AdapterError]struct{} {
 			ret[metrics.AdapterErrorBadServerResponse] = s
 		case errortypes.FailedToRequestBidsErrorCode:
 			ret[metrics.AdapterErrorFailedToRequestBids] = s
+		case errortypes.TroubleShootingSuggestionWarningCode:
+			// do nothing
 		default:
 			ret[metrics.AdapterErrorUnknown] = s
 		}

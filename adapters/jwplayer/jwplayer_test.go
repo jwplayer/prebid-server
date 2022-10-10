@@ -26,7 +26,7 @@ type MockRTDAdapter struct {
 	SiteId  string
 }
 
-func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) *Warning {
+func (rtdAdapter *MockRTDAdapter) EnrichRequest(request *openrtb2.BidRequest, siteId string) *errortypes.TroubleShootingSuggestion {
 	rtdAdapter.Request = request
 	rtdAdapter.SiteId = siteId
 	return nil
@@ -731,7 +731,7 @@ func TestOpenRTBEmptyResponse(t *testing.T) {
 	assert.Nil(t, bidResponse, "Expected empty response")
 	assert.Len(t, errs, 6)
 	for _, err := range errs {
-		assert.Equal(t, fmt.Sprintf("%T", &Warning{}), fmt.Sprintf("%T", err))
+		assert.Equal(t, fmt.Sprintf("%T", &errortypes.TroubleShootingSuggestion{}), fmt.Sprintf("%T", err))
 	}
 }
 

@@ -21,6 +21,7 @@ const (
 	AccountLevelDebugDisabledWarningCode
 	BidderLevelDebugDisabledWarningCode
 	DisabledCurrencyConversionWarningCode
+	TroubleShootingSuggestionWarningCode
 )
 
 // Coder provides an error or warning code with severity.
