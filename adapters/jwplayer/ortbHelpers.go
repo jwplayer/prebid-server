@@ -105,6 +105,34 @@ func MakeSChain(publisherId string, requestId string, publisherSChain *openrtb2.
 	}
 }
 
+// GetPublisherSChain25 Get the SChain from the 2.5 oRTB spec
+func GetPublisherSChain25(source *openrtb2.Source) *openrtb2.SupplyChain {
+	if source == nil {
+		return nil
+	}
+
+	if source.Ext == nil {
+		return nil
+	}
+
+	var extSource openrtb_ext.ExtSource
+	if err := json.Unmarshal(source.Ext, &extSource); err != nil {
+		return nil
+	}
+
+	schain := extSource.SChain
+
+	if schain == nil {
+		return nil
+	}
+
+	if schain.Nodes == nil {
+		return nil
+	}
+
+	return schain
+}
+
 // GetPublisherSChain26 Get the SChain from the 2.6 oRTB spec
 func GetPublisherSChain26(source *openrtb2.Source) *openrtb2.SupplyChain {
 	if source == nil {
