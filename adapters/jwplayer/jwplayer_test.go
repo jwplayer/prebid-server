@@ -565,6 +565,68 @@ func TestAppendingToExistingSchain(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
+	sourceExt := &openrtb_ext.ExtSource{
+		SChain: &openrtb2.SupplyChain{
+			Complete: 0,
+			Ver:      "2.0",
+			Nodes: []openrtb2.SupplyChainNode{{
+				ASI: "publisher.com",
+				SID: "some id",
+				RID: "some req id",
+				HP: openrtb2.Int8Ptr(0),
+			}},
+		},
+	}
+
+	sourceExtJSON, _ := json.Marshal(sourceExt)
+
+	rawRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "2"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+		Source: &openrtb2.Source{
+			Ext: sourceExtJSON,
+		},
+	}
+
+	processedRequests, err := a.MakeRequests(rawRequest, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
+
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":2}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Source: &openrtb2.Source{},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":0,"nodes":[{"asi":"publisher.com","sid":"some id","rid":"some req id","hp":0},{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+
+	assert.Equal(t, expectedRequest, bidRequest)
+}
+
+func TestAppendingToExistingSchain2(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
 	source := &openrtb2.Source{
 		SChain: &openrtb2.SupplyChain{
 			Complete: 0,
@@ -670,6 +732,54 @@ func TestEnrichmentCall(t *testing.T) {
 }
 
 func TestSourceSanitization(t *testing.T) {
+	a := getTestAdapter()
+	var reqInfo adapters.ExtraRequestInfo
+
+	request := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:  "test_imp_id",
+			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
+			},
+		},
+		Source: &openrtb2.Source{
+			Ext: json.RawMessage(`{}`),
+		},
+	}
+
+	fmt.Printf("TestSourceSanitization")
+
+	processedRequests, err := a.MakeRequests(request, &reqInfo)
+	assert.Empty(t, err)
+
+	processedRequest := processedRequests[0]
+	bidRequest := &openrtb2.BidRequest{}
+	json.Unmarshal(processedRequest.Body, bidRequest)
+
+	expectedRequest := &openrtb2.BidRequest{
+		ID: "test_id",
+		Imp: []openrtb2.Imp{{
+			ID:    "test_imp_id",
+			Video: &openrtb2.Video{},
+			Ext:   json.RawMessage(`{"appnexus":{"placement_id":1}}`),
+		}},
+		Site: &openrtb2.Site{
+			Publisher: &openrtb2.Publisher{
+				Ext: json.RawMessage((`{"jwplayer":{"publisherId":"testPublisherId"}}`)),
+			},
+		},
+		Source: &openrtb2.Source{},
+		Device: &openrtb2.Device{},
+		Ext:    json.RawMessage((`{"schain":{"complete":1,"nodes":[{"asi":"jwplayer.com","sid":"testPublisherId","rid":"test_id","hp":1}],"ver":"1.0"}}`)),
+	}
+	assert.Equal(t, expectedRequest, bidRequest)
+}
+
+func TestSourceSanitization2(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
