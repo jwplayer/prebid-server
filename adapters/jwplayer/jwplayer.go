@@ -298,16 +298,10 @@ func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId strin
 }
 
 func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
-	if source == nil {
-		return
-	}
 	source.Ext = nil
 }
 
 func (a *Adapter) clearPublisherSChain26(source *openrtb2.Source) {
-	if source == nil {
-		return
-	}
 	source.SChain = nil
 }
 
