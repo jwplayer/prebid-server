@@ -62,7 +62,7 @@ func HasJwpsegs(datum openrtb2.Data) bool {
 }
 
 func ParseJwpsegs(segments []openrtb2.Segment) []string {
-	segmentToJwpseg := func(segment openrtb2.Segment) string { return segment.Value }
+	segmentToJwpseg := func(segment openrtb2.Segment) string { return segment.ID }
 	jwpsegs := Map(segments, segmentToJwpseg)
 	return jwpsegs
 }
@@ -78,7 +78,7 @@ func MakeOrtbDatum(jwpsegs []string) (contentData openrtb2.Data) {
 }
 
 func MakeOrtbSegments(jwpsegs []string) []openrtb2.Segment {
-	jwpsegToSegment := func(jwpseg string) openrtb2.Segment { return openrtb2.Segment{Value: jwpseg} }
+	jwpsegToSegment := func(jwpseg string) openrtb2.Segment { return openrtb2.Segment{ID: jwpseg} }
 	segments := Map(jwpsegs, jwpsegToSegment)
 	return segments
 }
