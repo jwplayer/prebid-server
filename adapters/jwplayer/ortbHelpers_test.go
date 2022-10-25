@@ -50,21 +50,21 @@ func TestContentMetadataParseSuccess(t *testing.T) {
 }
 
 func TestGetExistingJwpsegs(t *testing.T) {
-	externalSegments1 := []openrtb2.Segment{{Value: "sthg"}, {Value: "else"}}
+	externalSegments1 := []openrtb2.Segment{{ID: "sthg"}, {ID: "else"}}
 	externalData1 := openrtb2.Data{Name: "external", Segment: externalSegments1}
 
-	externalSegments2 := []openrtb2.Segment{{Value: "sthg2"}, {Value: "else2"}}
+	externalSegments2 := []openrtb2.Segment{{ID: "sthg2"}, {ID: "else2"}}
 	externalData2 := openrtb2.Data{Name: "external number 2", Segment: externalSegments2}
 
-	jwSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}}
+	jwSegments := []openrtb2.Segment{{ID: "1"}, {ID: "2"}}
 	dataExt := DataExt{Segtax: 502}
 	ext, _ := json.Marshal(dataExt)
 	jwData := openrtb2.Data{Name: "jwplayer.com", Segment: jwSegments, Ext: ext}
 
-	externalSegments3 := []openrtb2.Segment{{Value: "3"}, {Value: "4"}}
+	externalSegments3 := []openrtb2.Segment{{ID: "3"}, {ID: "4"}}
 	dataWithoutSegtax := openrtb2.Data{Name: "jwplayer.com", Segment: externalSegments3}
 
-	externalSegments4 := []openrtb2.Segment{{Value: "5"}, {Value: "6"}}
+	externalSegments4 := []openrtb2.Segment{{ID: "5"}, {ID: "6"}}
 	dataWithWrongName := openrtb2.Data{Name: "other.com", Segment: externalSegments4, Ext: ext}
 
 	dataWithEmptySegments := openrtb2.Data{Name: "jwplayer.com", Ext: ext}
@@ -78,7 +78,7 @@ func TestGetExistingJwpsegs(t *testing.T) {
 
 func TestHasJwpsegs(t *testing.T) {
 	segments := []openrtb2.Segment{{
-		Value: "88888888",
+		ID: "88888888",
 	}}
 	jwDatumExt, _ := json.Marshal(DataExt{Segtax: jwplayerSegtax})
 	datum := openrtb2.Data{
@@ -106,7 +106,7 @@ func TestParseJwpsegs(t *testing.T) {
 	emptyJwpsegs := ParseJwpsegs(emptySegments)
 	assert.Empty(t, emptyJwpsegs)
 
-	segments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}}
+	segments := []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "3"}}
 	jwpsegs := ParseJwpsegs(segments)
 	expectedJwpsegs := []string{"1", "2", "3"}
 	assert.Len(t, jwpsegs, len(segments))
@@ -119,7 +119,7 @@ func TestMakeOrtbDatum(t *testing.T) {
 
 	expectedDatum := openrtb2.Data{
 		Name:    "jwplayer.com",
-		Segment: []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}},
+		Segment: []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "3"}},
 		Ext:     json.RawMessage(`{"segtax":502}`),
 	}
 
@@ -132,7 +132,7 @@ func TestMakeOrtbSegments(t *testing.T) {
 
 	jwpsegs := []string{"1", "2", "3"}
 	segments := MakeOrtbSegments(jwpsegs)
-	expectedSegments := []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}}
+	expectedSegments := []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "3"}}
 	assert.Len(t, segments, len(expectedSegments))
 	assert.ElementsMatch(t, segments, expectedSegments)
 }

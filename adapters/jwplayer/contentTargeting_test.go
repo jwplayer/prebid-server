@@ -61,7 +61,7 @@ func TestSuccessful(t *testing.T) {
 				Title: "testTitle",
 				Data: []openrtb2.Data{{
 					Name:    "jwplayer.com",
-					Segment: []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "3"}, {Value: "4"}, {Value: "5"}, {Value: "6"}, {Value: "7"}, {Value: "8"}},
+					Segment: []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "3"}, {ID: "4"}, {ID: "5"}, {ID: "6"}, {ID: "7"}, {ID: "8"}},
 					Ext:     json.RawMessage(`{"segtax":502}`),
 				}},
 				Ext: json.RawMessage(`{"description"": "testDesc"`),
@@ -117,7 +117,7 @@ func TestSuccessfulAppendsToKeywords(t *testing.T) {
 				Title: "testTitle",
 				Data: []openrtb2.Data{{
 					Name:    "jwplayer.com",
-					Segment: []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}},
+					Segment: []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "5"}, {ID: "6"}},
 					Ext:     json.RawMessage(`{"segtax":502}`),
 				}},
 				Ext: json.RawMessage(`{"description"": "testDesc"`),
@@ -185,7 +185,7 @@ func TestSuccessAppendsToPreviousData(t *testing.T) {
 					ID:   "3rdDataId",
 				}, {
 					Name:    "jwplayer.com",
-					Segment: []openrtb2.Segment{{Value: "1"}, {Value: "2"}, {Value: "5"}, {Value: "6"}},
+					Segment: []openrtb2.Segment{{ID: "1"}, {ID: "2"}, {ID: "5"}, {ID: "6"}},
 					Ext:     json.RawMessage(`{"segtax":502}`),
 				}},
 				Ext: json.RawMessage(`{"description"": "testDesc"`),
@@ -449,7 +449,7 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 					{
 						Name: "jwplayer.com",
 						Segment: []openrtb2.Segment{
-							{Value: "1"}, {Value: "2"}, {Value: "3"},
+							{ID: "1"}, {ID: "2"}, {ID: "3"},
 						},
 						Ext: []byte(`{"segtax": 502}`),
 					},
@@ -477,7 +477,7 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 					{
 						Name: "jwplayer.com",
 						Segment: []openrtb2.Segment{
-							{Value: "1"}, {Value: "2"}, {Value: "3"},
+							{ID: "1"}, {ID: "2"}, {ID: "3"},
 						},
 						Ext: []byte(`{"segtax": 502}`),
 					},
@@ -512,7 +512,7 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 					{
 						Name: "jwplayer.com",
 						Segment: []openrtb2.Segment{
-							{Value: "1"}, {Value: "2"}, {Value: "3"},
+							{ID: "1"}, {ID: "2"}, {ID: "3"},
 						},
 						Ext: []byte(`{"segtax": 502}`),
 					},
