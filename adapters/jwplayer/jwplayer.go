@@ -285,16 +285,20 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 
 func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId string) {
 	var publisherSChain *openrtb2.SupplyChain
-	if publisherSChain = GetPublisherSChain25(request.Source); publisherSChain != nil {
+	if (request.Source != nil && request.Source.Ext != nil) {
+		publisherSChain = GetPublisherSChain25(request.Source)
 		a.clearPublisherSChain25(request.Source)
-	} else if publisherSChain = GetPublisherSChain26(request.Source); publisherSChain != nil {
-		// We support request in the oRTB 2.6 format, whereas Xandr supports 2.4
-		// We discard the publisher's 2.6 schain to avoid the risk of confusion down the line for Xandr
+		sChain := MakeSChain(publisherId, request.ID, publisherSChain)
+		request.Ext = GetXandrRequestExt(sChain)
+	} else if (request.Source != nil) {
+		publisherSChain = GetPublisherSChain26(request.Source)
 		a.clearPublisherSChain26(request.Source)
+		sChain := MakeSChain(publisherId, request.ID, publisherSChain)
+		request.Ext = GetXandrRequestExt(sChain)
+	} else {
+		sChain := MakeSChain(publisherId, request.ID, nil)
+		request.Ext = GetXandrRequestExt(sChain)
 	}
-
-	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
-	request.Ext = GetXandrRequestExt(sChain)
 }
 
 func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
