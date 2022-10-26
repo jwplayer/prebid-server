@@ -751,7 +751,6 @@ func TestSourceSanitization(t *testing.T) {
 		},
 	}
 
-	fmt.Printf("TestSourceSanitization")
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)
 	assert.Empty(t, err)
