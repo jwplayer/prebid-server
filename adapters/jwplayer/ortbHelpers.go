@@ -111,10 +111,6 @@ func GetPublisherSChain25(source *openrtb2.Source) *openrtb2.SupplyChain {
 		return nil
 	}
 
-	if source.Ext == nil {
-		return nil
-	}
-
 	var extSource openrtb_ext.ExtSource
 	if err := json.Unmarshal(source.Ext, &extSource); err != nil {
 		return nil
@@ -143,9 +139,11 @@ func GetPublisherSChain26(source *openrtb2.Source) *openrtb2.SupplyChain {
 		return nil
 	}
 
-	schain := *source.SChain
+	if source.SChain.Nodes == nil {
+		return nil
+	}
 
-	return &schain
+	return source.SChain
 }
 
 func MakeSChainNode(publisherId string, requestId string) openrtb2.SupplyChainNode {
