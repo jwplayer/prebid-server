@@ -285,28 +285,18 @@ func (a *Adapter) getJwplayerPublisherExt(pubExt json.RawMessage) (*jwplayerPubl
 
 func (a *Adapter) setXandrSChain(request *openrtb2.BidRequest, publisherId string) {
 	var publisherSChain *openrtb2.SupplyChain
-	if (request.Source != nil && request.Source.Ext != nil) {
-		publisherSChain = GetPublisherSChain25(request.Source)
-		a.clearPublisherSChain25(request.Source)
-		sChain := MakeSChain(publisherId, request.ID, publisherSChain)
-		request.Ext = GetXandrRequestExt(sChain)
-	} else if (request.Source != nil) {
+	if publisherSChain = GetPublisherSChain25(request.Source); publisherSChain == nil {
 		publisherSChain = GetPublisherSChain26(request.Source)
-		a.clearPublisherSChain26(request.Source)
-		sChain := MakeSChain(publisherId, request.ID, publisherSChain)
-		request.Ext = GetXandrRequestExt(sChain)
-	} else {
-		sChain := MakeSChain(publisherId, request.ID, nil)
-		request.Ext = GetXandrRequestExt(sChain)
 	}
-}
 
-func (a *Adapter) clearPublisherSChain25(source *openrtb2.Source) {
-	source.Ext = nil
-}
+	// always clear 2.5  and 2.6 schain to avoid any possible confusion downstream
+	if request.Source != nil {
+		request.Source.SChain = nil
+		request.Source.Ext = nil
+	}
 
-func (a *Adapter) clearPublisherSChain26(source *openrtb2.Source) {
-	source.SChain = nil
+	sChain := MakeSChain(publisherId, request.ID, publisherSChain)
+	request.Ext = GetXandrRequestExt(sChain)
 }
 
 func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
