@@ -139,6 +139,10 @@ func GetPublisherSChain26(source *openrtb2.Source) *openrtb2.SupplyChain {
 		return nil
 	}
 
+	if source.SChain.Nodes == nil {
+		return nil
+	}
+
 	return source.SChain
 }
 

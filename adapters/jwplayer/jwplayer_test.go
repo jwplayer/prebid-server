@@ -561,7 +561,7 @@ func TestSChain(t *testing.T) {
 	assert.Equal(t, expectedRequest, bidRequest)
 }
 
-func TestAppendingToExistingSchain(t *testing.T) {
+func TestAppendingToExistingSchain25(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
@@ -623,7 +623,7 @@ func TestAppendingToExistingSchain(t *testing.T) {
 	assert.Equal(t, expectedRequest, bidRequest)
 }
 
-func TestAppendingToExistingSchain2(t *testing.T) {
+func TestAppendingToExistingSchain26(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
@@ -731,7 +731,7 @@ func TestEnrichmentCall(t *testing.T) {
 	assert.Empty(t, enrichmentSpy.SiteId)
 }
 
-func TestSourceSanitization(t *testing.T) {
+func TestSourceSanitization25(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
@@ -778,7 +778,7 @@ func TestSourceSanitization(t *testing.T) {
 	assert.Equal(t, expectedRequest, bidRequest)
 }
 
-func TestSourceSanitization2(t *testing.T) {
+func TestSourceSanitization26(t *testing.T) {
 	a := getTestAdapter()
 	var reqInfo adapters.ExtraRequestInfo
 
@@ -793,7 +793,9 @@ func TestSourceSanitization2(t *testing.T) {
 				Ext: json.RawMessage(`{"jwplayer":{"publisherId": "testPublisherId"}}`),
 			},
 		},
-		Source: &openrtb2.Source{},
+		Source: &openrtb2.Source{
+			SChain: &openrtb2.SupplyChain{},
+		},
 	}
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)
