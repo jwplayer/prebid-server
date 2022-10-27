@@ -103,7 +103,7 @@
             "application/json"
           ]
         },
-        "uri": "https://ssb.smartadserver.com/api/bid?callerId=5",
+        "uri": "https://ssb.smartadserver.com/api/bid?callerId=50",
         "body": {
           "id": "some-request-id",
           "device": {

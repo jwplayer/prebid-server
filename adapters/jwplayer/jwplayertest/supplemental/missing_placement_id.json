@@ -1,0 +1,80 @@
+{
+  "mockBidRequest": {
+    "id": "993af0d9-4ecb-4ac7-ac99-6bac442d9774",
+    "imp": [{
+      "bidfloor": 13.768,
+      "bidfloorcur": "USD",
+      "secure": 0,
+      "video": {
+        "api": [
+          1,
+          2
+        ],
+        "h": 250,
+        "maxduration": 3600,
+        "mimes": [
+          "video/mp4",
+          "video/x-flv",
+          "application/x-shockwave-flash",
+          "application/javascript"
+        ],
+        "minduration": 0,
+        "playbackmethod": [
+          1
+        ],
+        "protocols": [
+          2,
+          5
+        ],
+        "startdelay": 0,
+        "w": 300
+      }, "ext": {
+        "prebid": {
+          "bidder": {
+            "jwplayer": {
+              "publisherId": "PUBLISHER_ID"
+            }
+          }
+        }
+      }
+    }],
+    "badv": [
+      "example.com",
+      "example2.com"
+    ],
+    "cur": [
+      "USD"
+    ],
+    "device": {
+      "devicetype": 2,
+      "ip": "198.51.100.10",
+      "ipv6": "::ffff:198.51.100.10",
+      "language": "en",
+      "os": "windows",
+      "ua": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/51.0.2704.103 Safari/537.36"
+    },
+    "site": {
+      "cat": [
+        "IAB1"
+      ],
+      "domain": "example.com",
+      "id": "456789",
+      "page": "http://www.example.com/example-page",
+      "publisher": {
+        "id": "pub id"
+      },
+      "content": {
+        "id": "MEDIA_ID",
+        "title": "MEDIA_TITLE",
+        "url": "MEDIA_URL",
+        "ext": {
+          "description": "MEDIA_DESCRIPTION"
+        }
+      }
+    },
+    "user": {
+      "buyeruid": "87654332122234",
+      "id": "5123dab34d2fe47f225b2fd8dad97ec"
+    }
+  }
+}
