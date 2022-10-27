@@ -161,7 +161,10 @@ func (a *Adapter) MakeBids(request *openrtb2.BidRequest, requestData *adapters.R
 	}
 
 	var response openrtb2.BidResponse
-	if err := json.Unmarshal(responseData.Body, &response); err != nil {
+	if parseErr := json.Unmarshal(responseData.Body, &response); parseErr != nil {
+		err := &errortypes.BadServerResponse{
+			Message: parseErr.Error(),
+		}
 		return nil, []error{err}
 	}
 
@@ -309,16 +312,14 @@ func (a *Adapter) sanitizeRequest(request *openrtb2.BidRequest) {
 func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (suggestions []error) {
 	if device := request.Device; device != nil {
 		if device.IP == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.device.ip",
-				code:    TroubleShootingDeviceIPErrorCode,
 			})
 		}
 
 		if device.IFA == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.device.ifa",
-				code:    TroubleShootingDeviceIFAErrorCode,
 			})
 		}
 	}
@@ -327,58 +328,50 @@ func (a *Adapter) getTroubleShootingSuggestions(request *openrtb2.BidRequest) (s
 	const userIdFieldName = "$.user.id"
 	if user := request.User; user != nil {
 		if user.BuyerUID == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + buyerUserIdFieldName,
-				code:    TroubleShootingBuyerUIdErrorCode,
 			})
 		}
 
 		if user.ID == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + userIdFieldName,
-				code:    TroubleShootingUserIdErrorCode,
 			})
 		}
 	} else {
-		suggestions = append(suggestions, &Warning{
+		suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 			Message: TroubleshootingPrefix + buyerUserIdFieldName + " and " + userIdFieldName,
-			code:    TroubleShootingUserErrorCode,
 		})
 	}
 
 	if site := request.Site; site != nil {
 		if site.Ref == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.ref",
-				code:    TroubleShootingSiteRefErrorCode,
 			})
 		}
 
 		if site.Domain == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.domain",
-				code:    TroubleShootingSiteDomainErrorCode,
 			})
 		}
 
 		if site.Page == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.site.page",
-				code:    TroubleShootingSitePageErrorCode,
 			})
 		}
 	} else if app := request.App; app != nil {
 		if app.Domain == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.app.domain",
-				code:    TroubleShootingAppDomainErrorCode,
 			})
 		}
 
 		if app.Bundle == "" {
-			suggestions = append(suggestions, &Warning{
+			suggestions = append(suggestions, &errortypes.TroubleShootingSuggestion{
 				Message: TroubleshootingPrefix + "$.app.bundle",
-				code:    TroubleShootingAppBundleErrorCode,
 			})
 		}
 	}

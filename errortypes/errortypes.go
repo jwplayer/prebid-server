@@ -183,6 +183,22 @@ func (err *MalformedAcct) Severity() Severity {
 	return SeverityFatal
 }
 
+type TroubleShootingSuggestion struct {
+	Message string
+}
+
+func (err *TroubleShootingSuggestion) Error() string {
+	return err.Message
+}
+
+func (err *TroubleShootingSuggestion) Code() int {
+	return TroubleShootingSuggestionWarningCode
+}
+
+func (err *TroubleShootingSuggestion) Severity() Severity {
+	return SeverityWarning
+}
+
 // Warning is a generic non-fatal error.
 type Warning struct {
 	Message     string
