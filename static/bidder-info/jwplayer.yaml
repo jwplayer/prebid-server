@@ -8,3 +8,7 @@ capabilities:
   site:
     mediaTypes:
       - video
+userSync:
+  redirect:
+    url: "https://ib.adnxs.com/getuid?{{.RedirectURL}}"
+    userMacro: "$UID"
