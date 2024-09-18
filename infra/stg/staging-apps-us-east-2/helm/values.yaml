@@ -1,0 +1,46 @@
+project:
+  team: "hybrid"
+
+deployment:
+  enabled: true
+  replicas: 1
+  terminationGracePeriodSeconds: 60
+  containerPort: 8000
+  strategy:
+    type: RollingUpdate
+    maxUnavailable: 1
+    maxSurge: 1
+  autoscaling:
+    enabled: false
+  healthcheck:
+    enabled: false
+  ingress:
+    enabled: true
+    public: true
+    hosts:
+      - host: prebid-server.stg.connatix.com
+        paths:
+          - /
+    tls: [ ]
+    annotations: { }
+
+containerSettings:
+  resources:
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+    requests:
+      cpu: "1000m"
+      memory: "1Gi"
+  env:
+    PBS_GDPR_ENABLED: false
+    PBS_GDPR_DEFAULT_VALUE: false
+    PBS_EXTERNAL_URL: prebid-server.stg.connatix.com
+  
+nodeSettings:
+  useOnDemandInstances: false
+  nodeRestrictions: "none"
+  allowOtherAppsOnNode: true
+  instanceTypes: []
+  nodeGroups: [ "linux-multiaz-karpenter" ]
+  arch: [ "amd64" ]
