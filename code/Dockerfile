@@ -21,7 +21,7 @@ RUN go mod vendor
 ARG TEST="true"
 RUN if [ "$TEST" != "false" ]; then ./validate.sh ; fi
 RUN go build -mod=vendor .
-
+ 
 FROM ubuntu:20.04 AS release
 LABEL maintainer="hans.hjort@xandr.com" 
 WORKDIR /usr/local/bin/
