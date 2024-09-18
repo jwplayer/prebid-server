@@ -1,0 +1,7 @@
+[Infrastructure Approve] @connatix/infra
+infra/
+
+[Devs Approve] @connatix/backend/hybrid
+code/
+README.MD 
+.gitlab-ci.yml
