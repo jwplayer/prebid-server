@@ -21,6 +21,8 @@ deployment:
       - host: prebid-server.stg.connatix.com
         paths:
           - /
+    tls: [ ]
+    annotations: { }
 
 containerSettings:
   resources:
