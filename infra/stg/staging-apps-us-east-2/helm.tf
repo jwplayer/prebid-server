@@ -10,6 +10,5 @@ module "helm-release-cluster" {
     "containerSettings.image.tag" : var.cnx_version
     "project.url":      var.cnx_project_url
     "containerSettings.image.repository" : var.cnx_image_repo
-    "ingress.hostname": "prebid-server.stg.connatix.com"
   }
 }
