@@ -16,11 +16,11 @@ RUN apt-get update && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 ENV CGO_ENABLED 0
 COPY ./ ./
-RUN go mod tidy
+RUN go mod tidy 
 RUN go mod vendor
-ARG TEST="true"
+ARG TEST="false"
 RUN if [ "$TEST" != "false" ]; then ./validate.sh ; fi
-RUN go build -mod=vendor -ldflags "-X github.com/prebid/prebid-server/v2/version.Ver=`git describe --tags | sed 's/^v//'` -X github.com/prebid/prebid-server/v2/version.Rev=`git rev-parse HEAD`" .
+RUN go build -mod=vendor .
 
 FROM ubuntu:20.04 AS release
 LABEL maintainer="hans.hjort@xandr.com" 

@@ -1,0 +1,8 @@
+include:
+  - project: "connatix/tools/gitlab-pipeline-generator"
+    ref: master
+    file: "root-pipeline-template/.gitlab-ci.yml"
+
+variables:
+  CNX_PIPELINE_GENERATOR_COMMAND: "/cnx-pipeline-generator/presentation docker -a linux/amd64 --auto-deploy-environments stg/staging-apps-us-east-2"
+  
