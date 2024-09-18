@@ -42,6 +42,5 @@ nodeSettings:
   nodeRestrictions: "none"
   allowOtherAppsOnNode: true
   instanceTypes: []
-  nodeGroups: [
-    "linux-amd64"
-  ]
+  nodeGroups: [ "linux-multiaz-karpenter" ]
+  arch: [ "amd64" ]
