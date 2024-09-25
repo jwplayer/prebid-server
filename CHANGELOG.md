@@ -1,3 +1,10 @@
+## [1.0.3](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.2...1.0.3) (2024-09-25)
+
+
+### Bug Fixes
+
+* dummy ([ad43eae](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/ad43eae8b24582963df74491f471ae3a077cba1d))
+
 ## [1.0.2](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.1...1.0.2) (2024-09-25)
 
 
