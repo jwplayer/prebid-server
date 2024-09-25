@@ -35,7 +35,7 @@ containerSettings:
   env:
     PBS_GDPR_ENABLED: true
     PBS_GDPR_DEFAULT_VALUE: true
-    PBS_EXTERNAL_URL: prebid-server.stg.connatix.com
+    PBS_EXTERNAL_URL: https://prebid-server.stg.connatix.com
   
 nodeSettings:
   useOnDemandInstances: false
