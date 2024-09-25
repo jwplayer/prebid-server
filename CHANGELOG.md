@@ -1,3 +1,10 @@
+## [1.0.2](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.1...1.0.2) (2024-09-25)
+
+
+### Bug Fixes
+
+* test gdpr ([e132934](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/e132934e6f4a983f54096d517e7fda9e1ec59c67))
+
 ## [1.0.1](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.0...1.0.1) (2024-09-23)
 
 
