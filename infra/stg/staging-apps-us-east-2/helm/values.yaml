@@ -27,11 +27,11 @@ deployment:
 containerSettings:
   resources:
     limits:
-      cpu: "1000m"
-      memory: "1Gi"
+      cpu: "256m"
+      memory: "256Mi"
     requests:
-      cpu: "1000m"
-      memory: "1Gi"
+      cpu: "256m"
+      memory: "256Mi"
   env:
     PBS_GDPR_ENABLED: true
     PBS_GDPR_DEFAULT_VALUE: true
