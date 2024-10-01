@@ -1,3 +1,10 @@
+## [1.0.5](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.4...1.0.5) (2024-10-01)
+
+
+### Bug Fixes
+
+* reduce resources ([7c5aa9f](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/7c5aa9fcec92bd8b9d8fe4cb53bc52cc514dedcd))
+
 ## [1.0.4](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.3...1.0.4) (2024-10-01)
 
 
