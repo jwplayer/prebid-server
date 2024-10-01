@@ -1,3 +1,10 @@
+## [1.0.4](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.3...1.0.4) (2024-10-01)
+
+
+### Bug Fixes
+
+* Set "User-Agent" and "X-Forwarded-For" headers ([f4f9c01](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/f4f9c015d522c13d7d90fdba4dced65623be6fc2))
+
 ## [1.0.3](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.2...1.0.3) (2024-09-25)
 
 
