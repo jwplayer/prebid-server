@@ -155,7 +155,8 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 	headers.Add("Content-Type", "application/json")
 	headers.Add("Accept", "application/json")
 	
-    fmt.Println("cnx_request: ", json.Marshal(request))
+	reqJSON, err := json.Marshal(openRTBRequest)
+    fmt.Println("cnx_request: ", reqJSON)
     fmt.Println("cnx_uri: ", uri)
 	
     if len(request.Device.UA) > 0 {
