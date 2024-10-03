@@ -161,6 +161,7 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
     fmt.Println("cnx_ip: ", request.Device.IP)
     fmt.Println("cnx_request: ", request)
 	
+	
     if len(request.Device.UA) > 0 {
         headers.Add("User-Agent", request.Device.UA)
     }
