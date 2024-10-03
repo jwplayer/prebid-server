@@ -1,3 +1,10 @@
+## [1.0.8](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.7...1.0.8) (2024-10-03)
+
+
+### Bug Fixes
+
+* log request ([4e00a00](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/4e00a00ee25bb59230e5620455087d5a97e9d055))
+
 ## [1.0.7](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.6...1.0.7) (2024-10-03)
 
 
