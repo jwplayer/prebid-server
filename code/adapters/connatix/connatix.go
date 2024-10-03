@@ -155,6 +155,12 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 	headers.Add("Content-Type", "application/json")
 	headers.Add("Accept", "application/json")
 	
+	fmt.Printf("cnx_ipv6: "+ request.Device.IPv6)
+	fmt.Printf("cnx_ip: "+ request.Device.IP)
+	fmt.Println("cnx_ipv6: ", request.Device.IPv6)
+    fmt.Println("cnx_ip: ", request.Device.IP)
+    fmt.Println("cnx_request: ", request)
+	
     if len(request.Device.UA) > 0 {
         headers.Add("User-Agent", request.Device.UA)
     }
