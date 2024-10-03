@@ -1,3 +1,10 @@
+## [1.0.6](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.5...1.0.6) (2024-10-03)
+
+
+### Bug Fixes
+
+* add logs ([ed2353c](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/ed2353caa7c9d11e6c0239c4bb4f3e889d2b6e88))
+
 ## [1.0.5](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.4...1.0.5) (2024-10-01)
 
 
