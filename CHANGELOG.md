@@ -1,3 +1,10 @@
+## [1.0.7](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.6...1.0.7) (2024-10-03)
+
+
+### Bug Fixes
+
+* disable tests ([4b8dbe6](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/4b8dbe64edb185e2a0f86774621fd98d099a8550))
+
 ## [1.0.6](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.5...1.0.6) (2024-10-03)
 
 
