@@ -1,3 +1,10 @@
+## [1.0.11](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.10...1.0.11) (2024-12-10)
+
+
+### Bug Fixes
+
+* disable deployment ([7665da4](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/7665da48b7329a8d88f92283c6017b2361eb9d07))
+
 ## [1.0.10](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.9...1.0.10) (2024-10-03)
 
 
