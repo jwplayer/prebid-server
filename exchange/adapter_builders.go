@@ -53,6 +53,7 @@ import (
 	"github.com/prebid/prebid-server/adapters/coinzilla"
 	"github.com/prebid/prebid-server/adapters/colossus"
 	"github.com/prebid/prebid-server/adapters/compass"
+	"github.com/prebid/prebid-server/adapters/connatix"
 	"github.com/prebid/prebid-server/adapters/connectad"
 	"github.com/prebid/prebid-server/adapters/consumable"
 	"github.com/prebid/prebid-server/adapters/conversant"
@@ -316,5 +317,6 @@ func newAdapterBuilders() map[openrtb_ext.BidderName]adapters.Builder {
 		openrtb_ext.BidderYieldmo:           yieldmo.Builder,
 		openrtb_ext.BidderYieldone:          yieldone.Builder,
 		openrtb_ext.BidderZeroClickFraud:    zeroclickfraud.Builder,
+		openrtb_ext.BidderConnatix:          connatix.Builder,
 	}
 }

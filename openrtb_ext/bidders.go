@@ -133,6 +133,7 @@ const (
 	BidderCoinzilla         BidderName = "coinzilla"
 	BidderColossus          BidderName = "colossus"
 	BidderCompass           BidderName = "compass"
+	BidderConnatix          BidderName = "connatix"
 	BidderConnectAd         BidderName = "connectad"
 	BidderConsumable        BidderName = "consumable"
 	BidderConversant        BidderName = "conversant"
@@ -164,7 +165,7 @@ const (
 	BidderIx                BidderName = "ix"
 	BidderJANet             BidderName = "janet"
 	BidderJixie             BidderName = "jixie"
-	BidderJWPlayer          BidderName = "jwplayer"	
+	BidderJWPlayer          BidderName = "jwplayer"
 	BidderKargo             BidderName = "kargo"
 	BidderKayzen            BidderName = "kayzen"
 	BidderKidoz             BidderName = "kidoz"
@@ -297,6 +298,7 @@ func CoreBidderNames() []BidderName {
 		BidderCoinzilla,
 		BidderColossus,
 		BidderCompass,
+		BidderConnatix,
 		BidderConnectAd,
 		BidderConsumable,
 		BidderConversant,
