@@ -573,7 +573,7 @@ func TestAppendingToExistingSchain25(t *testing.T) {
 				ASI: "publisher.com",
 				SID: "some id",
 				RID: "some req id",
-				HP: openrtb2.Int8Ptr(0),
+				HP:  openrtb2.Int8Ptr(0),
 			}},
 		},
 	}
@@ -750,7 +750,6 @@ func TestSourceSanitization25(t *testing.T) {
 			Ext: json.RawMessage(`{}`),
 		},
 	}
-
 
 	processedRequests, err := a.MakeRequests(request, &reqInfo)
 	assert.Empty(t, err)
