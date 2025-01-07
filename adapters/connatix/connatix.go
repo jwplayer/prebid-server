@@ -7,12 +7,11 @@ import (
 	"strings"
 
 	"github.com/buger/jsonparser"
-	"github.com/prebid/openrtb/v20/openrtb2"
-	"github.com/prebid/prebid-server/v3/adapters"
-	"github.com/prebid/prebid-server/v3/config"
-	"github.com/prebid/prebid-server/v3/errortypes"
-	"github.com/prebid/prebid-server/v3/openrtb_ext"
-	"github.com/prebid/prebid-server/v3/util/jsonutil"
+	"github.com/mxmCherry/openrtb/v16/openrtb2"
+	"github.com/prebid/prebid-server/adapters"
+	"github.com/prebid/prebid-server/config"
+	"github.com/prebid/prebid-server/errortypes"
+	"github.com/prebid/prebid-server/openrtb_ext"
 )
 
 const (
@@ -20,7 +19,7 @@ const (
 )
 
 // Builder builds a new instance of the Connatix adapter for the given bidder with the given config.
-func Builder(bidderName openrtb_ext.BidderName, config config.Adapter, server config.Server) (adapters.Bidder, error) {
+func Builder(bidderName openrtb_ext.BidderName, config config.Adapter) (adapters.Bidder, error) {
 	bidder := &adapter{
 		endpoint: config.Endpoint,
 	}
@@ -62,17 +61,27 @@ func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	return requests, append(errs, errors...)
 }
 
-func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
-	if adapters.IsResponseStatusCodeNoContent(response) {
+func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
 
-	if err := adapters.CheckResponseStatusCodeForErrors(response); err != nil {
+	if responseData.StatusCode == http.StatusBadRequest {
+		err := &errortypes.BadInput{
+			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info", responseData.StatusCode),
+		}
+		return nil, []error{err}
+	}
+
+	if responseData.StatusCode != http.StatusOK {
+		err := &errortypes.BadServerResponse{
+			Message: fmt.Sprintf("Unexpected status code: %d. Run with request.debug = 1 for more info", responseData.StatusCode),
+		}
 		return nil, []error{err}
 	}
 
 	var connatixResponse openrtb2.BidResponse
-	if err := jsonutil.Unmarshal(response.Body, &connatixResponse); err != nil {
+	if err := json.Unmarshal(responseData.Body, &connatixResponse); err != nil {
 		return nil, []error{err}
 	}
 
@@ -84,7 +93,7 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 			var bidExt bidExt
 			var bidType openrtb_ext.BidType
 
-			if err := jsonutil.Unmarshal(bid.Ext, &bidExt); err != nil {
+			if err := json.Unmarshal(bid.Ext, &bidExt); err != nil {
 				bidType = openrtb_ext.BidTypeBanner
 			} else {
 				bidType = getBidType(bidExt)
@@ -104,7 +113,7 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 
 func validateAndBuildImpExt(imp *openrtb2.Imp) (impExtIncoming, error) {
 	var ext impExtIncoming
-	if err := jsonutil.Unmarshal(imp.Ext, &ext); err != nil {
+	if err := json.Unmarshal(imp.Ext, &ext); err != nil {
 		return impExtIncoming{}, err
 	}
 
@@ -149,7 +158,7 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 		impsForReq := imps[startInd:endInd]
 		request.Imp = impsForReq
 
-		reqJSON, err := jsonutil.Marshal(request)
+		reqJSON, err := json.Marshal(request)
 		if err != nil {
 			errs = append(errs, err)
 			return nil, errs
@@ -160,7 +169,7 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 			Uri:     uri,
 			Body:    reqJSON,
 			Headers: headers,
-			ImpIDs:  openrtb_ext.GetImpIDs(request.Imp),
+			ImpIDs:  GetImpIDs(request.Imp),
 		})
 		startInd = endInd
 	}
@@ -233,4 +242,12 @@ func getBidType(ext bidExt) openrtb_ext.BidType {
 	}
 
 	return openrtb_ext.BidTypeBanner
+}
+
+func GetImpIDs(imps []openrtb2.Imp) []string {
+	impIDs := make([]string, len(imps))
+	for i := range imps {
+		impIDs[i] = imps[i].ID
+	}
+	return impIDs
 }
