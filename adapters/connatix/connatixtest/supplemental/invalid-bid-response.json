@@ -109,7 +109,7 @@
     "expectedBidResponses": [],
     "expectedMakeBidsErrors": [
         {
-            "value": "cannot unmarshal openrtb2.BidResponse.SeatBid: decode slice: expect [ or n, but found {",
+            "value": "json: cannot unmarshal object into Go struct field BidResponse.seatbid of type []openrtb2.SeatBid",
             "comparison": "literal"
         }
     ]

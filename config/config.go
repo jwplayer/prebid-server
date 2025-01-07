@@ -1004,6 +1004,7 @@ func SetupViper(v *viper.Viper, filename string) {
 	v.SetDefault("adapters.ix.disabled", true)
 	v.SetDefault("adapters.janet.endpoint", "http://ghb.bidder.jmgads.com/pbs/ortb")
 	v.SetDefault("adapters.jixie.endpoint", "https://hb.jixie.io/v2/hbsvrpost")
+	v.SetDefault("adapters.connatix.endpoint", "https://capi.connatix.com/rtb/ortb")
 	v.SetDefault("adapters.jwplayer.endpoint", "http://jwplayer-useast.adnxs.com/openrtb2?member_id=12564")
 	v.SetDefault("adapters.jwplayer.extra_info", "{\"targeting_endpoint\": \"https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url={{.MediaUrl}}&title={{.Title}}&description={{.Description}}\"}")
 	v.SetDefault("adapters.kargo.endpoint", "https://krk.kargo.com/api/v1/openrtb")

@@ -302,7 +302,7 @@
     ],
     "expectedMakeRequestsErrors": [
         {
-            "value": "cannot unmarshal openrtb_ext.ExtImpConnatix.PlacementId: expects \" or n, but found 1",
+            "value": "json: cannot unmarshal number into Go struct field ExtImpConnatix.bidder.placementId of type string",
             "comparison": "literal"
         }
     ]
