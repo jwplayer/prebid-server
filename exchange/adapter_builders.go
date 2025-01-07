@@ -1,7 +1,6 @@
 package exchange
 
 import (
-	"github.com/prebid/prebid-server/adapters/jwplayer"
 	"github.com/prebid/prebid-server/v3/adapters"
 	ttx "github.com/prebid/prebid-server/v3/adapters/33across"
 	"github.com/prebid/prebid-server/v3/adapters/aax"
@@ -124,6 +123,7 @@ import (
 	"github.com/prebid/prebid-server/v3/adapters/iqzone"
 	"github.com/prebid/prebid-server/v3/adapters/ix"
 	"github.com/prebid/prebid-server/v3/adapters/jixie"
+	"github.com/prebid/prebid-server/v3/adapters/jwplayer"
 	"github.com/prebid/prebid-server/v3/adapters/kargo"
 	"github.com/prebid/prebid-server/v3/adapters/kayzen"
 	"github.com/prebid/prebid-server/v3/adapters/kidoz"
