@@ -1,3 +1,10 @@
+## [1.0.12](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.11...1.0.12) (2025-01-14)
+
+
+### Bug Fixes
+
+* upgrade prebid server ([9b3f203](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/9b3f20389f4a695f42316dd38708d00d7387bd80))
+
 ## [1.0.11](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.10...1.0.11) (2024-12-10)
 
 
