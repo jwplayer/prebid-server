@@ -3,7 +3,7 @@ project:
 
 deployment:
   enabled: true
-  replicas: 0
+  replicas: 1
   terminationGracePeriodSeconds: 60
   containerPort: 8000
   strategy:
