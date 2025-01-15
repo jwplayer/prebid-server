@@ -1,3 +1,10 @@
+## [1.0.13](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.12...1.0.13) (2025-01-15)
+
+
+### Bug Fixes
+
+* add 1 replica ([012708f](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/012708fdaab510389e7a7e743c4903cd495331de))
+
 ## [1.0.12](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.11...1.0.12) (2025-01-14)
 
 
