@@ -1,3 +1,10 @@
+## [1.0.15](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.14...1.0.15) (2025-01-15)
+
+
+### Bug Fixes
+
+* revert ([a3970c9](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/a3970c9fd69b4ce08e13925a57908715b21b615d))
+
 ## [1.0.14](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.13...1.0.14) (2025-01-15)
 
 
