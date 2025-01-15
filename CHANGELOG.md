@@ -1,3 +1,10 @@
+## [1.0.16](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.15...1.0.16) (2025-01-15)
+
+
+### Bug Fixes
+
+* fix pipe ([d5a1d21](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/d5a1d21e5d84ef1a36616f75954f3b3408ac8049))
+
 ## [1.0.15](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.14...1.0.15) (2025-01-15)
 
 
