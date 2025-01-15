@@ -1,3 +1,10 @@
+## [1.0.18](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.17...1.0.18) (2025-01-15)
+
+
+### Bug Fixes
+
+* fix log ([43c3b5f](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/43c3b5f6fd88f33ff4f3234bdc8db3dd24cc0c62))
+
 ## [1.0.17](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.16...1.0.17) (2025-01-15)
 
 
