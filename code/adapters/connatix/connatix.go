@@ -150,11 +150,15 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 		request.Imp = impsForReq
 
 		reqJSON, err := jsonutil.Marshal(request)
-		
+
 		if err != nil {
 			errs = append(errs, err)
+			fmt.Println("cnx_errors: ", errs)
 			return nil, errs
 		}
+    
+        fmt.Println("cnx_request: ", reqJSON)
+    	fmt.Println("cnx_uri: ", uri)
 
 		resArr = append(resArr, &adapters.RequestData{
 			Method:  "POST",
