@@ -1,3 +1,10 @@
+## [1.0.17](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.16...1.0.17) (2025-01-15)
+
+
+### Bug Fixes
+
+* Convert byte array to string and print ([29dadee](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/29dadeed50bc8d5816d89e1be0c433ce5a44b798))
+
 ## [1.0.16](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.15...1.0.16) (2025-01-15)
 
 
