@@ -157,7 +157,7 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 			return nil, errs
 		}
     
-        fmt.Println("cnx_request: ", reqJSON)
+        fmt.Println("cnx_request: ", string(reqJSON))
     	fmt.Println("cnx_uri: ", uri)
 
 		resArr = append(resArr, &adapters.RequestData{
