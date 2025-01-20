@@ -156,9 +156,9 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 			fmt.Println("cnx_errors: ", errs)
 			return nil, errs
 		}
-    
-        fmt.Println("cnx_request: ", string(reqJSON[:]))
-    	fmt.Println("cnx_uri: ", uri)
+
+		fmt.Println("cnx_request: ", string(reqJSON[:]))
+		fmt.Println("cnx_uri: ", uri)
 
 		resArr = append(resArr, &adapters.RequestData{
 			Method:  "POST",
@@ -205,6 +205,8 @@ func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer st
 	impExt := impExt{
 		Connatix: impExtConnatix{
 			PlacementId: ext.Bidder.PlacementId,
+			DeclaredViewabilityPercentage: ext.Bidder.DeclaredViewabilityPercentage,
+			DetectedViewabilityPercentage: ext.Bidder.DetectedViewabilityPercentage,
 		},
 	}
 
