@@ -1,3 +1,10 @@
+# [1.1.0](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.18...1.1.0) (2025-01-20)
+
+
+### Features
+
+* add viewability field for our adapter ([1b78c32](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/1b78c32d33bc48bec5f1d0398c01179ea59a3d24))
+
 ## [1.0.18](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.0.17...1.0.18) (2025-01-15)
 
 
