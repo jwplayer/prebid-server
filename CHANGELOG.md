@@ -1,3 +1,10 @@
+# [1.2.0](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.1.1...1.2.0) (2025-02-13)
+
+
+### Features
+
+* add dc query param for user with prefix ([be02147](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/be021477e5c53078e2282c51885d3449b3c4fac4))
+
 ## [1.1.1](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.1.0...1.1.1) (2025-01-21)
 
 
