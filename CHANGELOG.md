@@ -1,3 +1,10 @@
+## [1.2.1](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.2.0...1.2.1) (2025-02-13)
+
+
+### Bug Fixes
+
+* log endpoint ([6cbbcaf](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/commit/6cbbcaf6f2b7f9eb351a550cf0e2d52aa20c096e))
+
 # [1.2.0](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.1.1...1.2.0) (2025-02-13)
 
 
