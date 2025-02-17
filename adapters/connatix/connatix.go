@@ -168,7 +168,6 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 		endpoint, err := url.Parse(uri)
 		if err != nil {
 			errs = append(errs, err)
-			fmt.Println("cnx_errors: ", errs)
 			return nil, errs
 		}
 
