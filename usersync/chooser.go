@@ -1,5 +1,9 @@
 package usersync
 
+import (
+	"strings"
+)
+
 // Chooser determines which syncers are eligible for a given request.
 type Chooser interface {
 	// Choose considers bidders to sync, filters the bidders, and returns the result of the
@@ -147,6 +151,11 @@ func (c standardChooser) evaluate(bidder string, syncersSeen map[string]struct{}
 		return nil, BidderEvaluation{Bidder: bidder, Status: StatusTypeNotSupported}
 	}
 
+	requiresSync := c.requiresCnxSync(bidder, syncer.Key(), cookie)
+	if requiresSync {
+		return syncer, BidderEvaluation{Bidder: bidder, Status: StatusOK}
+	}
+
 	if cookie.HasLiveSync(syncer.Key()) {
 		return nil, BidderEvaluation{Bidder: bidder, Status: StatusAlreadySynced}
 	}
@@ -160,4 +169,14 @@ func (c standardChooser) evaluate(bidder string, syncersSeen map[string]struct{}
 	}
 
 	return syncer, BidderEvaluation{Bidder: bidder, Status: StatusOK}
+}
+
+func (c standardChooser) requiresCnxSync(bidder string, syncerKey string, cookie *Cookie) bool {
+	if bidder != "connatix" {
+		return false
+	}
+
+	uid, _, _ := cookie.GetUID(syncerKey)
+	isValidCnxCookie := strings.HasPrefix(uid, "1-") || strings.HasPrefix(uid, "2-") || strings.HasPrefix(uid, "3-")
+	return !isValidCnxCookie
 }
