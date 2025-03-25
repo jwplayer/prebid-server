@@ -7,12 +7,12 @@ import (
 )
 
 func TestIsInstream(t *testing.T) {
-	assert.True(t, IsInstream(adcom1.VideoInStream))
+	assert.True(t, IsInstream(adcom1.VideoPlacementInStream))
 
-	assert.False(t, IsInstream(adcom1.VideoInBanner))
-	assert.False(t, IsInstream(adcom1.VideoInArticle))
-	assert.False(t, IsInstream(adcom1.VideoInFeed))
-	assert.False(t, IsInstream(adcom1.VideoAlwaysVisible))
+	assert.False(t, IsInstream(adcom1.VideoPlacementInBanner))
+	assert.False(t, IsInstream(adcom1.VideoPlacementInArticle))
+	assert.False(t, IsInstream(adcom1.VideoPlacementInFeed))
+	assert.False(t, IsInstream(adcom1.VideoPlacementAlwaysVisible))
 }
 
 func TestIsValidMediaUrl(t *testing.T) {

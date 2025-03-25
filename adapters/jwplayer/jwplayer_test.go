@@ -8,6 +8,7 @@ import (
 	"github.com/prebid/prebid-server/v3/adapters"
 	"github.com/prebid/prebid-server/v3/errortypes"
 	"github.com/prebid/prebid-server/v3/openrtb_ext"
+	"github.com/prebid/prebid-server/v3/util/ptrutil"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"testing"
@@ -43,8 +44,8 @@ func TestSingleRequest(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -68,8 +69,8 @@ func TestSingleRequest(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID: "test_imp_id",
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -172,8 +173,8 @@ func TestImpVideoExt(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "1"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -197,8 +198,8 @@ func TestImpVideoExt(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID: "test_imp_id",
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
 		}},
@@ -213,7 +214,7 @@ func TestImpVideoExt(t *testing.T) {
 
 	assert.Equal(t, expectedRequest, bidRequest)
 
-	rawRequest.Imp[0].Video.Placement = adcom1.VideoInFeed
+	rawRequest.Imp[0].Video.Placement = adcom1.VideoPlacementInFeed
 	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
 	assert.Empty(t, err, "Errors array should be empty")
@@ -227,9 +228,9 @@ func TestImpVideoExt(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID: "test_imp_id",
 			Video: &openrtb2.Video{
-				H:         250,
-				W:         350,
-				Placement: adcom1.VideoInFeed,
+				H:         ptrutil.ToPtr[int64](250),
+				W:         ptrutil.ToPtr[int64](350),
+				Placement: adcom1.VideoPlacementInFeed,
 				Ext:       json.RawMessage(`{"appnexus":{"context":4}}`),
 			},
 			Ext: json.RawMessage(`{"appnexus":{"placement_id":1}}`),
@@ -245,7 +246,7 @@ func TestImpVideoExt(t *testing.T) {
 
 	assert.Equal(t, expectedRequest, bidRequest)
 
-	rawRequest.Imp[0].Video.Placement = adcom1.VideoInStream
+	rawRequest.Imp[0].Video.Placement = adcom1.VideoPlacementInStream
 	rawRequest.Imp[0].Video.StartDelay = adcom1.StartDelay(10).Ptr()
 	processedRequests, err = a.MakeRequests(rawRequest, &reqInfo)
 
@@ -257,9 +258,9 @@ func TestImpVideoExt(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID: "test_imp_id",
 			Video: &openrtb2.Video{
-				H:          250,
-				W:          350,
-				Placement:  adcom1.VideoInStream,
+				H:          ptrutil.ToPtr[int64](250),
+				W:          ptrutil.ToPtr[int64](350),
+				Placement:  adcom1.VideoPlacementInStream,
 				StartDelay: adcom1.StartDelay(10).Ptr(),
 				Ext:        json.RawMessage(`{"appnexus":{"context":2}}`),
 			},
@@ -696,8 +697,8 @@ func TestEnrichmentCall(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "2"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -716,8 +717,8 @@ func TestEnrichmentCall(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "3"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{
@@ -869,8 +870,8 @@ func TestOpenRTBStandardResponse(t *testing.T) {
 		Imp: []openrtb2.Imp{{
 			ID: "test-imp-id",
 			Video: &openrtb2.Video{
-				W: 320,
-				H: 50,
+				W: ptrutil.ToPtr[int64](320),
+				H: ptrutil.ToPtr[int64](50),
 			},
 			Ext: json.RawMessage(`{"bidder": {
 				"placementId": "2763",
