@@ -1,3 +1,5 @@
+endpoint: "http://jwplayer-useast.adnxs.com/openrtb2?member_id=12564"
+extra_info: "{\"targeting_endpoint\": \"https://content-targeting-api.longtailvideo.com/property/{{.SiteId}}/content_segments?content_url={{.MediaUrl}}&title={{.Title}}&description={{.Description}}\"}"
 maintainer:
   email: boost-engineering@jwplayer.com
 gvlVendorID: 1046
