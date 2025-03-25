@@ -19,13 +19,13 @@ func TestSetXandrVideoExt(t *testing.T) {
 	SetXandrVideoExt(video)
 	assert.Empty(t, video.Ext)
 
-	video.Placement = adcom1.VideoInArticle
+	video.Placement = adcom1.VideoPlacementInArticle
 	SetXandrVideoExt(video)
 	expectedVideoExt := json.RawMessage(`{"appnexus":{"context":4}}`)
 	assert.Equal(t, expectedVideoExt, video.Ext)
 
 	video.Ext = nil
-	video.Placement = adcom1.VideoInStream
+	video.Placement = adcom1.VideoPlacementInStream
 	video.StartDelay = adcom1.StartPostRoll.Ptr()
 	SetXandrVideoExt(video)
 	expectedVideoExt = json.RawMessage(`{"appnexus":{"context":3}}`)
@@ -36,11 +36,11 @@ func TestGetXandrContext(t *testing.T) {
 	video := openrtb2.Video{}
 	assert.Equal(t, Unknown, GetXandrContext(video))
 
-	video.Placement = adcom1.VideoInBanner
+	video.Placement = adcom1.VideoPlacementInBanner
 	video.StartDelay = adcom1.StartPreRoll.Ptr()
 	assert.Equal(t, Outstream, GetXandrContext(video))
 
-	video.Placement = adcom1.VideoInStream
+	video.Placement = adcom1.VideoPlacementInStream
 	assert.Equal(t, PreRoll, GetXandrContext(video))
 }
 

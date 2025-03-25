@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/prebid/openrtb/v20/openrtb2"
 	"github.com/prebid/prebid-server/v3/errortypes"
+	"github.com/prebid/prebid-server/v3/util/ptrutil"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -29,8 +30,8 @@ func TestSuccessful(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{
@@ -51,8 +52,8 @@ func TestSuccessful(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{
@@ -86,8 +87,8 @@ func TestSuccessfulAppendsToKeywords(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -106,8 +107,8 @@ func TestSuccessfulAppendsToKeywords(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -143,8 +144,8 @@ func TestSuccessAppendsToPreviousData(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -169,8 +170,8 @@ func TestSuccessAppendsToPreviousData(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -216,8 +217,8 @@ func TestMissingDistributionChannel(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 	}
@@ -243,8 +244,8 @@ func TestMissingContent(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{},
@@ -256,8 +257,8 @@ func TestMissingContent(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{},
@@ -285,8 +286,8 @@ func TestDecodeError(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{
@@ -304,8 +305,8 @@ func TestDecodeError(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		App: &openrtb2.App{
@@ -338,8 +339,8 @@ func TestNetworkError(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -357,8 +358,8 @@ func TestNetworkError(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -389,8 +390,8 @@ func TestMissingEndpoint(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -408,8 +409,8 @@ func TestMissingEndpoint(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -437,8 +438,8 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -465,8 +466,8 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -500,8 +501,8 @@ func TestRequestAlreadyHasSegments(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -538,8 +539,8 @@ func TestMissingSiteId(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -557,8 +558,8 @@ func TestMissingSiteId(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -583,8 +584,8 @@ func TestMissingTemplate(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -602,8 +603,8 @@ func TestMissingTemplate(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -631,8 +632,8 @@ func TestMissingContentUrl(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -649,8 +650,8 @@ func TestMissingContentUrl(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -679,8 +680,8 @@ func Test404(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -698,8 +699,8 @@ func Test404(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -730,8 +731,8 @@ func TestEmptySegments(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
@@ -749,8 +750,8 @@ func TestEmptySegments(t *testing.T) {
 			ID:  "test_imp_id",
 			Ext: json.RawMessage(`{"bidder":{"placementId": "test_placement_id"}}`),
 			Video: &openrtb2.Video{
-				H: 250,
-				W: 350,
+				H: ptrutil.ToPtr[int64](250),
+				W: ptrutil.ToPtr[int64](350),
 			},
 		}},
 		Site: &openrtb2.Site{
