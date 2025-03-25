@@ -2,10 +2,10 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"github.com/mxmCherry/openrtb/v16/openrtb2"
-	"github.com/prebid/prebid-server/adapters"
-	"github.com/prebid/prebid-server/errortypes"
-	"github.com/prebid/prebid-server/openrtb_ext"
+	"github.com/prebid/openrtb/v20/openrtb2"
+	"github.com/prebid/prebid-server/v3/adapters"
+	"github.com/prebid/prebid-server/v3/errortypes"
+	"github.com/prebid/prebid-server/v3/openrtb_ext"
 )
 
 func ParseBidderParams(imp openrtb2.Imp) (*openrtb_ext.ImpExtJWPlayer, error) {

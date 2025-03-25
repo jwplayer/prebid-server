@@ -1,8 +1,8 @@
 package jwplayer
 
 import (
-	"github.com/mxmCherry/openrtb/v16/openrtb2"
-	"github.com/prebid/prebid-server/errortypes"
+	"github.com/prebid/openrtb/v20/openrtb2"
+	"github.com/prebid/prebid-server/v3/errortypes"
 )
 
 type RTDAdapter interface {
