@@ -1,6 +1,6 @@
 package jwplayer
 
-import "github.com/prebid/prebid-server/errortypes"
+import "github.com/prebid/prebid-server/v3/errortypes"
 
 const (
 	MissingDistributionChannelErrorCode = 300001

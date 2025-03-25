@@ -2,7 +2,7 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"github.com/mxmCherry/openrtb/v16/openrtb2"
+	"github.com/prebid/openrtb/v20/openrtb2"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

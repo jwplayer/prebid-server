@@ -1,7 +1,7 @@
 package jwplayer
 
 import (
-	"github.com/mxmCherry/openrtb/v16/adcom1"
+	"github.com/prebid/openrtb/v20/adcom1"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

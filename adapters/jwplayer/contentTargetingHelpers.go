@@ -2,7 +2,7 @@ package jwplayer
 
 import (
 	"encoding/json"
-	"github.com/prebid/prebid-server/macros"
+	"github.com/prebid/prebid-server/v3/macros"
 	"net/url"
 	"text/template"
 )
