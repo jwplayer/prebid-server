@@ -6,7 +6,7 @@ import (
 )
 
 func IsInstream(placementType adcom1.VideoPlacementSubtype) bool {
-	return placementType == adcom1.VideoInStream
+	return placementType == adcom1.VideoPlacementInStream
 }
 
 func IsValidMediaUrl(rawUrl string) bool {

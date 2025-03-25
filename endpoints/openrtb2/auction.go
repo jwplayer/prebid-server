@@ -434,7 +434,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metric
 		N: deps.cfg.MaxRequestSize,
 	}
 
-	requestJson, err := io.ReadAll(limitedReqReader)
+	requestJson, err = io.ReadAll(limitedReqReader)
 	if err != nil {
 		errs = []error{err}
 		return
