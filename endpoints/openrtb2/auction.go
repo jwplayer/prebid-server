@@ -191,8 +191,8 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	w.Header().Set("X-Prebid", version.BuildXPrebidHeader(version.Ver))
 	setBrowsingTopicsHeader(w, r)
 
-	req, impExtInfoMap, storedAuctionResponses, storedBidResponses, bidderImpReplaceImp, account, errL := deps.parseRequest(r, &labels, hookExecutor)
-	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels) {
+	req, impExtInfoMap, storedAuctionResponses, storedBidResponses, bidderImpReplaceImp, account, errL, requestJson := deps.parseRequest(r, &labels, hookExecutor)
+	if errortypes.ContainsFatalError(errL) && writeError(errL, w, &labels, requestJson) {
 		return
 	}
 
@@ -235,7 +235,7 @@ func (deps *endpointDeps) Auction(w http.ResponseWriter, r *http.Request, _ http
 	err := deps.setIntegrationType(req, account)
 	if err != nil {
 		errL = append(errL, err)
-		writeError(errL, w, &labels)
+		writeError(errL, w, &labels, requestJson)
 		return
 	}
 	secGPC := r.Header.Get("Sec-GPC")
@@ -410,7 +410,7 @@ func setBrowsingTopicsHeader(w http.ResponseWriter, r *http.Request) {
 // possible, it will return errors with messages that suggest improvements.
 //
 // If the errors list has at least one element, then no guarantees are made about the returned request.
-func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metrics.Labels, hookExecutor hookexecution.HookStageExecutor) (req *openrtb_ext.RequestWrapper, impExtInfoMap map[string]exchange.ImpExtInfo, storedAuctionResponses stored_responses.ImpsWithBidResponses, storedBidResponses stored_responses.ImpBidderStoredResp, bidderImpReplaceImpId stored_responses.BidderImpReplaceImpID, account *config.Account, errs []error) {
+func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metrics.Labels, hookExecutor hookexecution.HookStageExecutor) (req *openrtb_ext.RequestWrapper, impExtInfoMap map[string]exchange.ImpExtInfo, storedAuctionResponses stored_responses.ImpsWithBidResponses, storedBidResponses stored_responses.ImpBidderStoredResp, bidderImpReplaceImpId stored_responses.BidderImpReplaceImpID, account *config.Account, errs []error, requestJson []byte) {
 	errs = nil
 	var err error
 	var errL []error
@@ -470,7 +470,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metric
 
 	impInfo, errs := parseImpInfo(requestJson)
 	if len(errs) > 0 {
-		return nil, nil, nil, nil, nil, nil, errs
+		return nil, nil, nil, nil, nil, nil, errs, requestJson
 	}
 
 	storedBidRequestId, hasStoredBidRequest, storedRequests, storedImps, errs := deps.getStoredRequests(ctx, requestJson, impInfo)
@@ -516,7 +516,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metric
 	if hasPayloadUpdatesAt(hooks.StageRawAuctionRequest.String(), hookExecutor.GetOutcomes()) {
 		impInfo, errs = parseImpInfo(requestJson)
 		if len(errs) > 0 {
-			return nil, nil, nil, nil, nil, nil, errs
+			return nil, nil, nil, nil, nil, nil, errs, requestJson
 		}
 		storedBidRequestId, hasStoredBidRequest, storedRequests, storedImps, errs = deps.getStoredRequests(ctx, requestJson, impInfo)
 		if len(errs) > 0 {
@@ -566,7 +566,7 @@ func (deps *endpointDeps) parseRequest(httpRequest *http.Request, labels *metric
 	storedAuctionResponses, storedBidResponses, bidderImpReplaceImpId, errL = stored_responses.ProcessStoredResponses(ctx, req, deps.storedRespFetcher)
 	if len(errL) > 0 {
 		errs = append(errs, errL...)
-		return nil, nil, nil, nil, nil, nil, errs
+		return nil, nil, nil, nil, nil, nil, errs, requestJson
 	}
 
 	hasStoredAuctionResponses := len(storedAuctionResponses) > 0
@@ -1904,7 +1904,7 @@ func setDoNotTrackImplicitly(httpReq *http.Request, r *openrtb_ext.RequestWrappe
 }
 
 // Write(return) errors to the client, if any. Returns true if errors were found.
-func writeError(errs []error, w http.ResponseWriter, labels *metrics.Labels) bool {
+func writeError(errs []error, w http.ResponseWriter, labels *metrics.Labels, requestJson []byte) bool {
 	var rc bool = false
 	if len(errs) > 0 {
 		httpStatus := http.StatusBadRequest
@@ -1927,6 +1927,7 @@ func writeError(errs []error, w http.ResponseWriter, labels *metrics.Labels) boo
 			fmt.Fprintf(w, "Invalid request: %s\n", err.Error())
 			if glog.V(2) {
 				glog.Infof("Invalid request: %s", err.Error())
+				glog.Infof("Request: %s", string(requestJson))
 			}
 		}
 		rc = true
