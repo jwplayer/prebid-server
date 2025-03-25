@@ -32,7 +32,7 @@
     "httpCalls": [
       {
         "expectedRequest": {
-          "uri": "https://ssb.smartadserver.com/api/bid?callerId=5",
+          "uri": "https://ssb.smartadserver.com/api/bid?callerId=50",
           "body": {
             "id": "test-request-multi-id",
             "imp": [
@@ -111,4 +111,3 @@
       }
     ]
   }
-  
