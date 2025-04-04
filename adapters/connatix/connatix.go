@@ -97,29 +97,24 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 
 func validateAndBuildImpExt(imp *openrtb2.Imp) (impExtIncoming, error) {
 	var ext impExtIncoming
-	err := jsonparser.ObjectEach(imp.Ext, func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
-		if string(key) != "bidder" {
-			return nil
-		}
 
-		if placementID, err := jsonparser.GetString(value, "placementId"); err == nil {
-			ext.Bidder.PlacementId = placementID
-		} else {
-
-			return &errortypes.BadInput{
-				Message: "Bid request does not contain a valid Placement ID",
-			}
-		}
-
-		if viewability, err := jsonparser.GetFloat(value, "viewabilityPercentage"); err == nil {
-			ext.Bidder.ViewabilityPercentage = viewability
-		}
-
-		return nil
-	})
-
+	bidderJSON, _, _, err := jsonparser.Get(imp.Ext, "bidder")
 	if err != nil {
-		return impExtIncoming{}, err
+		return impExtIncoming{}, &errortypes.BadInput{
+			Message: "Missing 'bidder' object",
+		}
+	}
+
+	if placementId, err := jsonparser.GetString(bidderJSON, "placementId"); err == nil {
+		ext.Bidder.PlacementId = placementId
+	} else {
+		return impExtIncoming{}, &errortypes.BadInput{
+			Message: "Invalid Placement ID",
+		}
+	}
+
+	if viewability, err := jsonparser.GetFloat(bidderJSON, "viewabilityPercentage"); err == nil {
+		ext.Bidder.ViewabilityPercentage = viewability
 	}
 
 	return ext, nil
@@ -131,10 +126,6 @@ func splitRequests(imps []openrtb2.Imp, originalRequest *openrtb2.BidRequest, ur
 	// Let's say there are 35 impressions and limit impressions per request equals to 10.
 	// In this case we need to create 4 requests with 10, 10, 10 and 5 impressions.
 	// With this formula initial capacity=(35+10-1)/10 = 4
-	//initialCapacity := (len(imps) + maxImpsPerReq - 1) / maxImpsPerReq
-	//resArr := make([]*adapters.RequestData, 0, initialCapacity)
-	//startInd := 0
-	//impsLeft := len(imps) > 0
 
 	var requests []*adapters.RequestData
 
