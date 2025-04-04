@@ -105,7 +105,27 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 
 func validateAndBuildImpExt(imp *openrtb2.Imp) (impExtIncoming, error) {
 	var ext impExtIncoming
-	if err := jsonutil.Unmarshal(imp.Ext, &ext); err != nil {
+
+	// Use jsonparser to extract only the fields under "bidder"
+	err := jsonparser.ObjectEach(imp.Ext, func(key []byte, value []byte, dataType jsonparser.ValueType, offset int) error {
+		if string(key) != "bidder" {
+			return nil
+		}
+
+		// Parse placementId
+		if placementID, err := jsonparser.GetString(value, "placementId"); err == nil {
+			ext.Bidder.PlacementId = placementID
+		}
+
+		// Parse viewabilityPercentage
+		if viewability, err := jsonparser.GetFloat(value, "viewabilityPercentage"); err == nil {
+			ext.Bidder.ViewabilityPercentage = viewability
+		}
+
+		return nil
+	})
+
+	if err != nil {
 		return impExtIncoming{}, err
 	}
 
@@ -193,15 +213,9 @@ func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string
 }
 
 func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer string, reqInfo *adapters.ExtraRequestInfo) error {
-	if imp.Banner != nil {
-		bannerCopy := *imp.Banner
-
-		if bannerCopy.W == nil && bannerCopy.H == nil && len(bannerCopy.Format) > 0 {
-			firstFormat := bannerCopy.Format[0]
-			bannerCopy.W = &(firstFormat.W)
-			bannerCopy.H = &(firstFormat.H)
-		}
-		imp.Banner = &bannerCopy
+	if imp.Banner != nil && imp.Banner.W == nil && imp.Banner.H == nil && len(imp.Banner.Format) > 0 {
+		imp.Banner.W = &imp.Banner.Format[0].W
+		imp.Banner.H = &imp.Banner.Format[0].H
 	}
 
 	// Populate imp.displaymanagerver if the SDK failed to do it.
