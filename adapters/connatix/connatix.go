@@ -37,20 +37,20 @@ func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	var errs []error
 	var validImps []openrtb2.Imp
 
-	for i := range request.Imp {
-		imp := &request.Imp[i]
-		impExt, err := validateAndBuildImpExt(imp)
+	for _, imp := range request.Imp {
+		impCopy := imp
+		impExt, err := validateAndBuildImpExt(&impCopy)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
 
-		if err := buildRequestImp(imp, impExt, displayManagerVer, reqInfo); err != nil {
+		if err := buildRequestImp(&impCopy, impExt, displayManagerVer, reqInfo); err != nil {
 			errs = append(errs, err)
 			continue
 		}
 
-		validImps = append(validImps, *imp)
+		validImps = append(validImps, impCopy)
 	}
 
 	requests, splitErrs := splitRequests(validImps, request, a.endpoint)
