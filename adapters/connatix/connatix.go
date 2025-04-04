@@ -50,11 +50,6 @@ func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 			continue
 		}
 
-		if imp.Secure == nil {
-			secure := int8(1)
-			imp.Secure = &secure
-		}
-
 		validImps = append(validImps, *imp)
 	}
 
@@ -157,9 +152,11 @@ func splitRequests(imps []openrtb2.Imp, originalRequest *openrtb2.BidRequest, ur
 			headers.Add("User-Agent", ua)
 		}
 
-		if ip := originalRequest.Device.IP; ip != "" {
+		if ip := originalRequest.Device.IPv6; ip != "" {
 			headers.Add("X-Forwarded-For", ip)
-		} else if ip := originalRequest.Device.IPv6; ip != "" {
+		}
+
+		if ip := originalRequest.Device.IP; ip != "" {
 			headers.Add("X-Forwarded-For", ip)
 		}
 	}
