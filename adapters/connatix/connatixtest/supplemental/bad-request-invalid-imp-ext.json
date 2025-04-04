@@ -47,7 +47,7 @@
   "expectedBidResponses": [],
   "expectedMakeRequestsErrors": [
     {
-      "value": "cannot unmarshal openrtb_ext.ExtImpConnatix.PlacementId: expects \" or n, but found {",
+      "value": "Bid request does not contain a valid Placement ID",
       "comparison": "literal"
     }
   ]

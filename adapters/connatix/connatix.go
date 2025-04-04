@@ -104,6 +104,11 @@ func validateAndBuildImpExt(imp *openrtb2.Imp) (impExtIncoming, error) {
 
 		if placementID, err := jsonparser.GetString(value, "placementId"); err == nil {
 			ext.Bidder.PlacementId = placementID
+		} else {
+
+			return &errortypes.BadInput{
+				Message: "Bid request does not contain a valid Placement ID",
+			}
 		}
 
 		if viewability, err := jsonparser.GetFloat(value, "viewabilityPercentage"); err == nil {
@@ -206,9 +211,15 @@ func splitRequests(imps []openrtb2.Imp, originalRequest *openrtb2.BidRequest, ur
 }
 
 func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer string, reqInfo *adapters.ExtraRequestInfo) error {
-	if imp.Banner != nil && imp.Banner.W == nil && imp.Banner.H == nil && len(imp.Banner.Format) > 0 {
-		imp.Banner.W = &imp.Banner.Format[0].W
-		imp.Banner.H = &imp.Banner.Format[0].H
+	if imp.Banner != nil {
+		bannerCopy := *imp.Banner
+
+		if bannerCopy.W == nil && bannerCopy.H == nil && len(bannerCopy.Format) > 0 {
+			firstFormat := bannerCopy.Format[0]
+			bannerCopy.W = &(firstFormat.W)
+			bannerCopy.H = &(firstFormat.H)
+		}
+		imp.Banner = &bannerCopy
 	}
 
 	// Populate imp.displaymanagerver if the client failed to do it.
