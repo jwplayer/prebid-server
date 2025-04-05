@@ -17,15 +17,11 @@ import (
 )
 
 const (
-	maxImpsPerReq = 1
+	maxImpsPerRequest = 1
 )
 
-// Builder builds a new instance of the Connatix adapter for the given bidder with the given config.
 func Builder(bidderName openrtb_ext.BidderName, config config.Adapter, server config.Server) (adapters.Bidder, error) {
-	bidder := &adapter{
-		endpoint: config.Endpoint,
-	}
-	return bidder, nil
+	return &adapter{endpoint: config.Endpoint}, nil
 }
 
 func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
@@ -38,29 +34,27 @@ func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 	// connatix adapter expects imp.displaymanagerver to be populated in openrtb2 request
 	// but some SDKs will put it in imp.ext.prebid instead
 	displayManagerVer := buildDisplayManagerVer(request)
-
 	var errs []error
+	var validImps []openrtb2.Imp
 
-	validImps := []openrtb2.Imp{}
-
-	for i := range request.Imp {
-		impExtIncoming, err := validateAndBuildImpExt(&request.Imp[i])
+	for _, imp := range request.Imp {
+		impCopy := imp
+		impExt, err := validateAndBuildImpExt(&impCopy)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
 
-		if err := buildRequestImp(&request.Imp[i], impExtIncoming, displayManagerVer, reqInfo); err != nil {
+		if err := buildRequestImp(&impCopy, impExt, displayManagerVer, reqInfo); err != nil {
 			errs = append(errs, err)
 			continue
 		}
 
-		validImps = append(validImps, request.Imp[i])
+		validImps = append(validImps, impCopy)
 	}
 
-	// Divide imps to several requests
-	requests, errors := splitRequests(validImps, request, a.endpoint)
-	return requests, append(errs, errors...)
+	requests, splitErrs := splitRequests(validImps, request, a.endpoint)
+	return requests, append(errs, splitErrs...)
 }
 
 func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
@@ -77,7 +71,6 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 		return nil, []error{err}
 	}
 
-	var errs []error
 	bidderResponse := adapters.NewBidderResponseWithBidsCapacity(1)
 	for _, sb := range connatixResponse.SeatBid {
 		for i := range sb.Bid {
@@ -99,97 +92,113 @@ func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest
 	}
 
 	bidderResponse.Currency = "USD"
-
-	return bidderResponse, errs
+	return bidderResponse, nil
 }
 
 func validateAndBuildImpExt(imp *openrtb2.Imp) (impExtIncoming, error) {
 	var ext impExtIncoming
-	if err := jsonutil.Unmarshal(imp.Ext, &ext); err != nil {
-		return impExtIncoming{}, err
+
+	bidderJSON, _, _, err := jsonparser.Get(imp.Ext, "bidder")
+	if err != nil {
+		return impExtIncoming{}, &errortypes.BadInput{
+			Message: "Missing 'bidder' object",
+		}
+	}
+
+	if placementId, err := jsonparser.GetString(bidderJSON, "placementId"); err == nil {
+		ext.Bidder.PlacementId = placementId
+	} else {
+		return impExtIncoming{}, &errortypes.BadInput{
+			Message: "Invalid Placement ID",
+		}
+	}
+
+	if viewability, err := jsonparser.GetFloat(bidderJSON, "viewabilityPercentage"); err == nil {
+		ext.Bidder.ViewabilityPercentage = viewability
 	}
 
 	return ext, nil
 }
 
-func splitRequests(imps []openrtb2.Imp, request *openrtb2.BidRequest, uri string) ([]*adapters.RequestData, []error) {
+func splitRequests(imps []openrtb2.Imp, originalRequest *openrtb2.BidRequest, uri string) ([]*adapters.RequestData, []error) {
 	var errs []error
 	// Initial capacity for future array of requests, memory optimization.
 	// Let's say there are 35 impressions and limit impressions per request equals to 10.
 	// In this case we need to create 4 requests with 10, 10, 10 and 5 impressions.
 	// With this formula initial capacity=(35+10-1)/10 = 4
-	initialCapacity := (len(imps) + maxImpsPerReq - 1) / maxImpsPerReq
-	resArr := make([]*adapters.RequestData, 0, initialCapacity)
-	startInd := 0
-	impsLeft := len(imps) > 0
 
-	headers := http.Header{}
-	headers.Add("Content-Type", "application/json")
-	headers.Add("Accept", "application/json")
+	var requests []*adapters.RequestData
 
-	if request.Device != nil {
-		if len(request.Device.UA) > 0 {
-			headers.Add("User-Agent", request.Device.UA)
+	if len(imps) == 0 {
+		return nil, nil
+	}
+
+	baseEndpoint, err := url.Parse(uri)
+	if err != nil {
+		return nil, []error{err}
+	}
+
+	headers := http.Header{
+		"Content-Type": {"application/json"},
+		"Accept":       {"application/json"},
+	}
+
+	if originalRequest.Device != nil {
+		if ua := originalRequest.Device.UA; ua != "" {
+			headers.Add("User-Agent", ua)
 		}
 
-		if len(request.Device.IPv6) > 0 {
-			headers.Add("X-Forwarded-For", request.Device.IPv6)
+		if ip := originalRequest.Device.IPv6; ip != "" {
+			headers.Add("X-Forwarded-For", ip)
 		}
 
-		if len(request.Device.IP) > 0 {
-			headers.Add("X-Forwarded-For", request.Device.IP)
+		if ip := originalRequest.Device.IP; ip != "" {
+			headers.Add("X-Forwarded-For", ip)
 		}
 	}
 
-	for impsLeft {
-		endInd := startInd + maxImpsPerReq
-		if endInd >= len(imps) {
-			endInd = len(imps)
-			impsLeft = false
-		}
-		impsForReq := imps[startInd:endInd]
-		request.Imp = impsForReq
-
-		reqJSON, err := jsonutil.Marshal(request)
-		if err != nil {
-			errs = append(errs, err)
-			return nil, errs
-		}
-
-		endpoint, err := url.Parse(uri)
-		if err != nil {
-			errs = append(errs, err)
-			return nil, errs
-		}
-
-		if request.User != nil {
-			userID := strings.TrimSpace(request.User.BuyerUID)
-
-			if len(userID) > 0 {
-				queryParams := url.Values{}
-
-				if strings.HasPrefix(userID, "1-") {
-					queryParams.Add("dc", "us-east-2")
-				} else if strings.HasPrefix(userID, "2-") {
-					queryParams.Add("dc", "us-west-2")
-				} else if strings.HasPrefix(userID, "3-") {
-					queryParams.Add("dc", "eu-west-1")
-				}
-
-				endpoint.RawQuery = queryParams.Encode()
+	endpoint := *baseEndpoint
+	if originalRequest.User != nil {
+		userID := strings.TrimSpace(originalRequest.User.BuyerUID)
+		if userID != "" {
+			queryParams := url.Values{}
+			switch {
+			case strings.HasPrefix(userID, "1-"):
+				queryParams.Add("dc", "us-east-2")
+			case strings.HasPrefix(userID, "2-"):
+				queryParams.Add("dc", "us-west-2")
+			case strings.HasPrefix(userID, "3-"):
+				queryParams.Add("dc", "eu-west-1")
 			}
+			endpoint.RawQuery = queryParams.Encode()
+		}
+	}
+
+	for start := 0; start < len(imps); start += maxImpsPerRequest {
+		end := start + maxImpsPerRequest
+		if end > len(imps) {
+			end = len(imps)
+		}
+		impsForRequest := imps[start:end]
+		requestCopy := *originalRequest
+		requestCopy.Imp = impsForRequest
+
+		requestJSON, err := jsonutil.Marshal(&requestCopy)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
 
-		resArr = append(resArr, &adapters.RequestData{
+		requests = append(requests, &adapters.RequestData{
 			Method:  "POST",
 			Uri:     endpoint.String(),
-			Body:    reqJSON,
+			Body:    requestJSON,
 			Headers: headers,
-			ImpIDs:  openrtb_ext.GetImpIDs(request.Imp),
+			ImpIDs:  openrtb_ext.GetImpIDs(impsForRequest),
 		})
-		startInd = endInd
 	}
-	return resArr, errs
+
+	return requests, errs
 }
 
 func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer string, reqInfo *adapters.ExtraRequestInfo) error {
@@ -204,8 +213,8 @@ func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer st
 		imp.Banner = &bannerCopy
 	}
 
-	// Populate imp.displaymanagerver if the SDK failed to do it.
-	if len(imp.DisplayManagerVer) == 0 && len(displayManagerVer) > 0 {
+	// Populate imp.displaymanagerver if the client failed to do it.
+	if imp.DisplayManagerVer == "" && displayManagerVer != "" {
 		imp.DisplayManagerVer = displayManagerVer
 	}
 
@@ -216,10 +225,11 @@ func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer st
 		if err != nil {
 			return err
 		}
+
 		// Update after conversion. All imp elements inside request.Imp are shallow copies
 		// therefore, their non-pointer values are not shared memory and are safe to modify.
-		imp.BidFloorCur = "USD"
 		imp.BidFloor = convertedValue
+		imp.BidFloorCur = "USD"
 	}
 
 	impExt := impExt{
@@ -231,7 +241,6 @@ func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer st
 
 	var err error
 	imp.Ext, err = json.Marshal(impExt)
-
 	return err
 }
 

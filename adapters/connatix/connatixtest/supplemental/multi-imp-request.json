@@ -302,7 +302,7 @@
   ],
   "expectedMakeRequestsErrors": [
     {
-      "value": "cannot unmarshal openrtb_ext.ExtImpConnatix.PlacementId: expects \" or n, but found 1",
+      "value": "Invalid Placement ID",
       "comparison": "literal"
     }
   ]
