@@ -3,11 +3,9 @@ package connatix
 import (
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/prebid/openrtb/v20/openrtb2"
@@ -60,10 +58,6 @@ func (a *adapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.E
 }
 
 func (a *adapter) MakeBids(internalRequest *openrtb2.BidRequest, externalRequest *adapters.RequestData, response *adapters.ResponseData) (*adapters.BidderResponse, []error) {
-	if strings.HasPrefix(internalRequest.Imp[0].ID, "sparg") {
-		return nil, nil
-	}
-
 	if adapters.IsResponseStatusCodeNoContent(response) {
 		return nil, nil
 	}
@@ -185,47 +179,26 @@ func splitRequests(imps []openrtb2.Imp, originalRequest *openrtb2.BidRequest, ur
 		if end > len(imps) {
 			end = len(imps)
 		}
-
 		impsForRequest := imps[start:end]
+		requestCopy := *originalRequest
+		requestCopy.Imp = impsForRequest
 
-		for i := 0; i < 5; i++ {
-			requestCopy := *originalRequest
-			if i == 0 {
-				requestCopy.Imp = impsForRequest
-			} else {
-				impCopy := impsForRequest[0]
-				impCopy.ID = getRandomId()
-				requestCopy.Imp = []openrtb2.Imp{impCopy}
-			}
-
-			requestJSON, err := jsonutil.Marshal(&requestCopy)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-
-			requests = append(requests, &adapters.RequestData{
-				Method:  "POST",
-				Uri:     endpoint.String(),
-				Body:    requestJSON,
-				Headers: headers,
-				ImpIDs:  openrtb_ext.GetImpIDs(requestCopy.Imp),
-			})
+		requestJSON, err := jsonutil.Marshal(&requestCopy)
+		if err != nil {
+			errs = append(errs, err)
+			continue
 		}
 
+		requests = append(requests, &adapters.RequestData{
+			Method:  "POST",
+			Uri:     endpoint.String(),
+			Body:    requestJSON,
+			Headers: headers,
+			ImpIDs:  openrtb_ext.GetImpIDs(impsForRequest),
+		})
 	}
 
 	return requests, errs
-}
-
-func getRandomId() string {
-	// Create a local random generator with a time-based seed
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	// Generate 8-digit number and prefix with "sparg"
-	num := r.Intn(100_000_000)
-	id := fmt.Sprintf("sparg%08d", num)
-	return id
 }
 
 func buildRequestImp(imp *openrtb2.Imp, ext impExtIncoming, displayManagerVer string, reqInfo *adapters.ExtraRequestInfo) error {
