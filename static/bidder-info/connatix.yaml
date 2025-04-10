@@ -1,4 +1,4 @@
-endpoint: "https://capi.connatix.com/rtb/ortb"
+endpoint: "http://api.sla-wg-dev.omni03.stg-aws-us-east-1.k8s.jwp.io/ortb"
 maintainer:
   email: "pubsolutions@connatix.com"
 gvlVendorID: 143
