@@ -1,3 +1,10 @@
+# [1.3.0](https://gitlab.com/jwpconnatix/connatix/backend/connatix.prebidserver/compare/1.2.1...1.3.0) (2025-10-28)
+
+
+### Features
+
+* add gzip compression ([bfe1f67](https://gitlab.com/jwpconnatix/connatix/backend/connatix.prebidserver/commit/bfe1f67a866ed6755d84d2723f0171e521708842))
+
 ## [1.2.1](https://gitlab.ops.connatix.com/connatix/backend/connatix.prebidserver/compare/1.2.0...1.2.1) (2025-02-13)
 
 
