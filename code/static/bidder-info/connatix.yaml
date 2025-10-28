@@ -2,6 +2,7 @@ endpoint: "https://capi.connatix.com/rtb/ortb"
 maintainer:
   email: "pubsolutions@connatix.com"
 gvlVendorID: 143
+endpointCompression: gzip
 capabilities:
   app:
     mediaTypes:
