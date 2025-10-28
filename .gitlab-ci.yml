@@ -1,5 +1,5 @@
 include:
-  - project: "connatix/tools/gitlab-pipeline-generator"
+  - project: "jwpconnatix/connatix/tools/gitlab-pipeline-generator"
     ref: master
     file: "root-pipeline-template/.gitlab-ci.yml"
 

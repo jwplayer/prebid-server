@@ -1,5 +1,5 @@
 module "helm-release-cluster" {
-  source        = "gitlab.ops.connatix.com/connatix/helm-release/deploy"
+  source        = "gitlab.com/jwpconnatix/helm-release/deploy"
   chart_repo    = "http://chartmuseum.ops.connatix.com/"
   chart_version = "^11.0.0"
   chart_name    = "cnx-universal-chart"
