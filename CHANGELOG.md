@@ -1,3 +1,10 @@
+## [1.3.1](https://gitlab.com/jwpconnatix/connatix/backend/connatix.prebidserver/compare/1.3.0...1.3.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* **prebid:** force build ([d110cbb](https://gitlab.com/jwpconnatix/connatix/backend/connatix.prebidserver/commit/d110cbb2c6f143bbe126719ed709a1a7bb73fec2))
+
 # [1.3.0](https://gitlab.com/jwpconnatix/connatix/backend/connatix.prebidserver/compare/1.2.1...1.3.0) (2025-10-28)
 
 
